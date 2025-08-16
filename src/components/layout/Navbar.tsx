@@ -36,7 +36,7 @@ export default function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                <User className="mr-2 h-4 w-4" /> Account
+                <User className="h-4 w-2" /> 
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

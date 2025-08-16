@@ -35,13 +35,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <h3 className="font-medium line-clamp-1">{product.name}</h3>
         <div className="mt-1 text-sm text-muted-foreground">{product.category}</div>
         <div className="mt-3 flex items-center justify-between">
-          <span className="font-semibold">${product.price.toFixed(2)}</span>
-          <Button
-            size="sm"
-            onClick={onAdd}
-          >
-            Add to cart
-          </Button>
+
         </div>
       </div>
     </article>

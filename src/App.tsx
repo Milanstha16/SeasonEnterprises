@@ -14,6 +14,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Signin from "./pages/Signin";
 import Signup from "./pages/Signup";
+import Shop from "./pages/Shop";
 import { CartProvider } from "@/context/CartContext";
 import { HelmetProvider } from "react-helmet-async";
 
@@ -37,7 +38,7 @@ const App = () => (
               <Route path="/account" element={<AccountPage />} />
               <Route path="/signin" element={<Signin />} />
               <Route path="/signup" element={<Signup />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="/shop" element={<Shop />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Footer />
