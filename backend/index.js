@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import ProductRoutes from './routes/ProductRoutes.js';
+import AuthRoutes from './routes/AuthRoutes.js';
 
 // Initialize dotenv to read environment variables
 dotenv.config();
@@ -22,6 +23,7 @@ app.get("/", (req, res) => {
 
 // ✅ Use product routes
 app.use("/api", ProductRoutes);
+app.use("/api/auth", AuthRoutes);
 
 // MongoDB connection
 mongoose

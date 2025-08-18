@@ -17,6 +17,7 @@ import Signup from "./pages/Signup";
 import Shop from "./pages/Shop";
 import { CartProvider } from "@/context/CartContext";
 import { HelmetProvider } from "react-helmet-async";
+import { AuthProvider } from "@/context/AuthContext"; // <-- Import AuthProvider
 
 const queryClient = new QueryClient();
 
@@ -24,26 +25,28 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <HelmetProvider>
-        <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/account" element={<AccountPage />} />
-              <Route path="/signin" element={<Signin />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Footer />
-          </BrowserRouter>
-        </CartProvider>
+        <AuthProvider> {/* Wrap with AuthProvider */}
+          <CartProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Navbar />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/product/:id" element={<ProductDetail />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/account" element={<AccountPage />} />
+                <Route path="/signin" element={<Signin />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Footer />
+            </BrowserRouter>
+          </CartProvider>
+        </AuthProvider>
       </HelmetProvider>
     </TooltipProvider>
   </QueryClientProvider>

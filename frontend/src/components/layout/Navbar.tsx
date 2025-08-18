@@ -1,10 +1,23 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext"; // ✅ Import useAuth
 
 export default function Navbar() {
-  
+  const { user, logout } = useAuth(); // ✅ Get user and logout from context
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/signin");
+  };
+
   const linkCls = ({ isActive }: { isActive: boolean }) =>
     isActive ? "text-primary" : "text-foreground/80 hover:text-foreground";
 
@@ -35,23 +48,32 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <User className="h-4 w-2" /> 
+              <Button variant="outline" className="flex items-center gap-2 px-3">
+                <User className="h-4 w-4" />
+                {user ? user.name.split(" ")[0] : "Account"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <NavLink to="/account">
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-              </NavLink>
-              <NavLink to="/cart">
-                <DropdownMenuItem>Orders</DropdownMenuItem>
-              </NavLink>
-              <NavLink to="/signin">
-                <DropdownMenuItem>Sign in</DropdownMenuItem>
-              </NavLink>
-              <NavLink to="/signup">
-                <DropdownMenuItem>Create account</DropdownMenuItem>
-              </NavLink>
+              {user ? (
+                <>
+                  <NavLink to="/account">
+                    <DropdownMenuItem>Profile</DropdownMenuItem>
+                  </NavLink>
+                  <NavLink to="/cart">
+                    <DropdownMenuItem>Cart</DropdownMenuItem>
+                  </NavLink>
+                  <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <NavLink to="/signin">
+                    <DropdownMenuItem>Sign in</DropdownMenuItem>
+                  </NavLink>
+                  <NavLink to="/signup">
+                    <DropdownMenuItem>Create account</DropdownMenuItem>
+                  </NavLink>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
