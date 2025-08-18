@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-type User = {
+// Updated User type including role
+export type User = {
   id: string;
   name: string;
   email: string;
+  role: "user" | "admin"; // <-- Add role
+  profilePicture?: string | null; // Optional profile picture URL
 };
 
 type AuthContextType = {
@@ -24,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedUser = localStorage.getItem("user");
     if (savedToken && savedUser) {
       setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      setUser(JSON.parse(savedUser) as User); // Type assertion
     }
   }, []);
 
@@ -49,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
