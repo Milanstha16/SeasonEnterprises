@@ -12,12 +12,14 @@ const Signup = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); // reset error on submit
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {  // <-- fixed URL here
+      // Sending request to the backend
+      const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -25,23 +27,25 @@ const Signup = () => {
         body: JSON.stringify({ name, email, password }),
       });
 
-      const data = await response.json();
-
+      // Check if the response is not OK (e.g., 4xx or 5xx error)
       if (!response.ok) {
-        setError(data.msg || "Signup failed");
+        const errorData = await response.json();
+        setError(errorData.msg || "Signup failed");
         return;
       }
 
+      // If successful, extract token and user data
+      const data = await response.json();
       const { token, user } = data;
 
       // Update auth context
       login(token, user);
 
-      // Redirect to shop or account page
+      // Redirect to the shop or account page
       navigate("/shop");
     } catch (error) {
       console.error("Signup error:", error);
-      setError("An error occurred during signup");
+      setError("An error occurred during signup. Please try again later.");
     }
   };
 
@@ -59,10 +63,12 @@ const Signup = () => {
       <div className="w-full max-w-md px-6 py-10 border rounded-lg shadow-sm bg-white">
         <h1 className="font-display text-3xl mb-2 text-center">Create Account</h1>
 
+        {/* Display error message */}
         {error && (
           <p className="mb-4 text-red-600 font-semibold text-center">{error}</p>
         )}
 
+        {/* Signup Form */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="name" className="block text-sm font-medium mb-1">
@@ -109,11 +115,13 @@ const Signup = () => {
             />
           </div>
 
+          {/* Submit Button */}
           <Button type="submit" className="w-full">
             Sign Up
           </Button>
         </form>
 
+        {/* Link to Sign In page */}
         <p className="mt-6 text-sm text-center text-muted-foreground">
           Already have an account?{" "}
           <Link to="/signin" className="text-primary hover:underline">

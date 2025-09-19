@@ -1,4 +1,3 @@
-// frontend/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,11 +17,11 @@ import Shop from "./pages/Shop";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import AdminNavbar from "./admin/AdminNavbar"; // Create a separate admin navbar
+import AdminNavbar from "./admin/AdminNavbar"; // Admin-specific Navbar
 
 import AdminLogin from "./admin/AdminLogin";
 import AdminDashboard from "./admin/AdminDashboard";
-import PrivateAdminRoute from "./admin/PrivateAdminRoute";
+import PrivateAdminRoute from "./admin/PrivateAdminRoute"; // Admin route protection
 
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -30,17 +29,18 @@ import { HelmetProvider } from "react-helmet-async";
 
 const queryClient = new QueryClient();
 
-// Wrapper component to handle conditional navbar/footer
+// Wrapper component for conditional navbar/footer rendering
 const AppWrapper = () => {
   const location = useLocation();
   const { user } = useAuth();
 
+  // Check if the route is an admin route and if the user is an admin
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAdminLoggedIn = user?.role === "admin";
 
   return (
     <>
-      {/* Navbar */}
+      {/* Conditional Navbar rendering */}
       {!isAdminRoute && <Navbar />}
       {isAdminRoute && isAdminLoggedIn && <AdminNavbar />}
 
@@ -67,7 +67,7 @@ const AppWrapper = () => {
           }
         />
 
-        {/* 404 */}
+        {/* 404 Not Found */}
         <Route path="*" element={<NotFound />} />
       </Routes>
 

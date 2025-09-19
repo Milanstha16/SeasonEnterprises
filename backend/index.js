@@ -13,7 +13,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors()); // Allow CORS requests
+app.use(
+  cors({
+    origin: 'http://localhost:8080',  // Allow requests only from the frontend at localhost:8080
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json()); // Parse JSON request bodies
 
 // Test route
@@ -21,7 +27,7 @@ app.get("/", (req, res) => {
   res.send("API is running!");
 });
 
-// ✅ Use product routes
+// ✅ Use product and auth routes
 app.use("/api", ProductRoutes);
 app.use("/api/auth", AuthRoutes);
 
