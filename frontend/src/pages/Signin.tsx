@@ -8,43 +8,53 @@ const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); // Clear previous errors
+    setError(null);
+    setLoading(true);
+
+    const trimmedEmail = email.trim().toLowerCase();
 
     try {
+      console.log("Sending login request with:", { email: trimmedEmail });
+
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: trimmedEmail, password }),
       });
 
+      console.log("Login response status:", response.status);
+
       if (!response.ok) {
-        // Extract error message from response
         const errorData = await response.json();
-        setError(errorData.msg || "Login failed");
+        setError(errorData.msg || "Login failed. Please check your credentials.");
         return;
       }
 
       const data = await response.json();
       const { token, user } = data;
 
-      // Save token to localStorage for authenticated requests
-      localStorage.setItem("auth_token", token);
+      // Save to localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
-      // Update global auth context
+      // Update auth context
       login(token, user);
 
-      // Redirect user after successful login
+      // Redirect
       navigate("/shop");
     } catch (err) {
       console.error("Login error:", err);
-      setError("An error occurred during login. Please try again.");
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,7 +76,7 @@ const SignIn = () => {
           <p className="mb-4 text-red-600 font-semibold text-center">{error}</p>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
               Email address
@@ -74,6 +84,8 @@ const SignIn = () => {
             <input
               type="email"
               id="email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-muted text-sm"
@@ -88,6 +100,8 @@ const SignIn = () => {
             <input
               type="password"
               id="password"
+              name="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-muted text-sm"
@@ -95,13 +109,13 @@ const SignIn = () => {
             />
           </div>
 
-          <Button type="submit" className="w-full">
-            Sign In
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Signing In..." : "Sign In"}
           </Button>
         </form>
 
         <p className="mt-6 text-sm text-center text-muted-foreground">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link to="/signup" className="text-primary hover:underline">
             Sign up here
           </Link>

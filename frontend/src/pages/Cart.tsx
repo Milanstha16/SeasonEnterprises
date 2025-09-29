@@ -17,7 +17,7 @@ export default function CartPage() {
       {items.length === 0 ? (
         <div>
           <p className="text-muted-foreground">Your cart is empty.</p>
-          <Link to="/">
+          <Link to="/shop">
             <Button className="mt-4">Continue Shopping</Button>
           </Link>
         </div>

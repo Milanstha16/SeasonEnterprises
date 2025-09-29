@@ -82,7 +82,7 @@ const router = createBrowserRouter(
     },
   ],
   {
-    // Enable future flags to silence warnings
+    // Optional future flag (keep if you want)
     future: {
       v7_relativeSplatPath: true,
     },
@@ -97,8 +97,10 @@ const App = () => (
           <CartProvider>
             <Toaster />
             <Sonner />
-            {/* Use RouterProvider with created router */}
-            <RouterProvider router={router} />
+            <RouterProvider
+              router={router}
+              future={{ v7_startTransition: true }}
+            />
           </CartProvider>
         </AuthProvider>
       </HelmetProvider>

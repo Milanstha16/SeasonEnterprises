@@ -19,16 +19,11 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ msg: "Email already registered" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    const newUser = new User({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
+    // Create user - password hashing handled in model pre-save hook
+    const newUser = new User({ name, email, password });
     await newUser.save();
 
+    // Sign JWT token
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
       process.env.JWT_SECRET,
@@ -45,7 +40,7 @@ router.post("/register", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Register error:", err);
     res.status(500).json({ msg: "Server error" });
   }
 });
@@ -54,8 +49,7 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    console.log("Login attempt:", { email, password }); // Debug input
+    console.log("Login attempt:", { email, password });
 
     if (!email || !password) {
       return res.status(400).json({ msg: "Please provide email and password" });
@@ -63,13 +57,14 @@ router.post("/login", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
+      console.log("User not found with email:", email);
       return res.status(401).json({ msg: "Invalid credentials" });
     }
 
-    console.log("User found:", user);
+    console.log("User found:", user.email);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match:", isMatch);
+    console.log("Password match result:", isMatch);
 
     if (!isMatch) {
       return res.status(401).json({ msg: "Invalid credentials" });
@@ -91,7 +86,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Login error:", err);
     res.status(500).json({ msg: "Server error" });
   }
 });
