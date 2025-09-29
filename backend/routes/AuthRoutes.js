@@ -1,26 +1,26 @@
 import express from "express";
-import User from "../models/User.js";  // Your User model
+import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// POST /api/auth/register (Signup Route)
+// Signup Route
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password)
+    if (!name || !email || !password) {
       return res.status(400).json({ msg: "Please provide name, email, and password" });
+    }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ msg: "Email already registered" });
+    if (existingUser) {
+      return res.status(400).json({ msg: "Email already registered" });
+    }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create the user in the database
     const newUser = new User({
       name,
       email,
@@ -29,14 +29,12 @@ router.post("/register", async (req, res) => {
 
     await newUser.save();
 
-    // Create a JWT token
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    // Send token and user info
     res.json({
       token,
       user: {
@@ -52,32 +50,37 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// POST /api/auth/login (Login Route)
+// Login Route
 router.post("/login", async (req, res) => {
-  console.log(req.body); // Log the request body for debugging
-
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
+    console.log("Login attempt:", { email, password }); // Debug input
+
+    if (!email || !password) {
       return res.status(400).json({ msg: "Please provide email and password" });
+    }
 
-    // Find user in MongoDB
     const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ msg: "Invalid credentials" });
+    if (!user) {
+      return res.status(401).json({ msg: "Invalid credentials" });
+    }
 
-    // Compare password
+    console.log("User found:", user);
+
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ msg: "Invalid credentials" });
+    console.log("Password match:", isMatch);
 
-    // Create JWT
+    if (!isMatch) {
+      return res.status(401).json({ msg: "Invalid credentials" });
+    }
+
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    // Send token and user info
     res.json({
       token,
       user: {

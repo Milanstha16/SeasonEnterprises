@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, useLocation } from "react-router-dom";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -17,11 +17,11 @@ import Shop from "./pages/Shop";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import AdminNavbar from "./admin/AdminNavbar"; // Admin-specific Navbar
+import AdminNavbar from "./admin/AdminNavbar";
 
 import AdminLogin from "./admin/AdminLogin";
 import AdminDashboard from "./admin/AdminDashboard";
-import PrivateAdminRoute from "./admin/PrivateAdminRoute"; // Admin route protection
+import PrivateAdminRoute from "./admin/PrivateAdminRoute";
 
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -29,53 +29,65 @@ import { HelmetProvider } from "react-helmet-async";
 
 const queryClient = new QueryClient();
 
-// Wrapper component for conditional navbar/footer rendering
+// Wrapper component for conditional Navbar/Footer rendering
 const AppWrapper = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Check if the route is an admin route and if the user is an admin
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAdminLoggedIn = user?.role === "admin";
 
   return (
     <>
-      {/* Conditional Navbar rendering */}
       {!isAdminRoute && <Navbar />}
       {isAdminRoute && isAdminLoggedIn && <AdminNavbar />}
 
-      <Routes>
-        {/* User Routes */}
-        <Route path="/" element={<Index />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/account" element={<AccountPage />} />
-        <Route path="/signin" element={<Signin />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/shop" element={<Shop />} />
+      {/* Render nested routes */}
+      <Outlet />
 
-        {/* Admin Routes */}
-        <Route path="/adminlogin" element={<AdminLogin />} />
-        <Route
-          path="/admin"
-          element={
-            <PrivateAdminRoute>
-              <AdminDashboard />
-            </PrivateAdminRoute>
-          }
-        />
-
-        {/* 404 Not Found */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-
-      {/* Footer */}
       {!isAdminRoute && <Footer />}
     </>
   );
 };
+
+// Define routes array for createBrowserRouter
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <AppWrapper />,
+      children: [
+        { path: "/", element: <Index /> },
+        { path: "product/:id", element: <ProductDetail /> },
+        { path: "cart", element: <CartPage /> },
+        { path: "checkout", element: <CheckoutPage /> },
+        { path: "contact", element: <ContactPage /> },
+        { path: "account", element: <AccountPage /> },
+        { path: "signin", element: <Signin /> },
+        { path: "signup", element: <Signup /> },
+        { path: "shop", element: <Shop /> },
+
+        { path: "adminlogin", element: <AdminLogin /> },
+        {
+          path: "admin",
+          element: (
+            <PrivateAdminRoute>
+              <AdminDashboard />
+            </PrivateAdminRoute>
+          ),
+        },
+
+        { path: "*", element: <NotFound /> },
+      ],
+    },
+  ],
+  {
+    // Enable future flags to silence warnings
+    future: {
+      v7_relativeSplatPath: true,
+    },
+  }
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -85,9 +97,8 @@ const App = () => (
           <CartProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <AppWrapper />
-            </BrowserRouter>
+            {/* Use RouterProvider with created router */}
+            <RouterProvider router={router} />
           </CartProvider>
         </AuthProvider>
       </HelmetProvider>

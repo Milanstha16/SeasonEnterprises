@@ -11,10 +11,9 @@ const SignIn = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); // Reset error on submit
+    setError(null); // Clear previous errors
 
     try {
       const response = await fetch("http://localhost:5000/api/auth/login", {
@@ -25,28 +24,26 @@ const SignIn = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      // Handle non-OK response (e.g., 4xx, 5xx errors)
       if (!response.ok) {
+        // Extract error message from response
         const errorData = await response.json();
         setError(errorData.msg || "Login failed");
         return;
       }
 
       const data = await response.json();
-
-      // If login is successful, extract token and user info
       const { token, user } = data;
 
-      // Store token in localStorage for future authenticated requests
+      // Save token to localStorage for authenticated requests
       localStorage.setItem("auth_token", token);
 
-      // Update auth context
+      // Update global auth context
       login(token, user);
 
-      // Redirect to the shop or account page
+      // Redirect user after successful login
       navigate("/shop");
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (err) {
+      console.error("Login error:", err);
       setError("An error occurred during login. Please try again.");
     }
   };
@@ -65,12 +62,10 @@ const SignIn = () => {
       <div className="w-full max-w-md px-6 py-10 border rounded-lg shadow-sm bg-white">
         <h1 className="font-display text-3xl mb-2 text-center">Sign In</h1>
 
-        {/* Display error message */}
         {error && (
           <p className="mb-4 text-red-600 font-semibold text-center">{error}</p>
         )}
 
-        {/* Signin Form */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
@@ -100,13 +95,11 @@ const SignIn = () => {
             />
           </div>
 
-          {/* Submit Button */}
           <Button type="submit" className="w-full">
             Sign In
           </Button>
         </form>
 
-        {/* Link to Sign Up page */}
         <p className="mt-6 text-sm text-center text-muted-foreground">
           Don't have an account?{" "}
           <Link to="/signup" className="text-primary hover:underline">
