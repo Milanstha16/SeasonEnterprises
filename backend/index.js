@@ -12,15 +12,25 @@ const PORT = process.env.PORT || 5000;
 
 console.log("JWT_SECRET loaded:", process.env.JWT_SECRET ? "Yes" : "No");
 
-app.use(
-  cors({
-    origin: ["http://localhost:8080", "http://192.168.101.8:8080"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+// ✅ Updated CORS config to support dynamic IPs (e.g. 192.168.x.x)
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (
+      !origin || // allow non-browser clients like Postman
+      origin === "http://localhost:8080" || // allow localhost
+      /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) // allow any 192.168.x.x:port
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS: " + origin));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
 
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get("/", (req, res) => {
