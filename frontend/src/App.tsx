@@ -2,7 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider, Outlet, useLocation } from "react-router-dom";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+  useLocation,
+} from "react-router-dom";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -27,30 +32,35 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { HelmetProvider } from "react-helmet-async";
 
+import { useEffect } from "react";
+
 const queryClient = new QueryClient();
 
-// Wrapper component for conditional Navbar/Footer rendering
+// ✅ Updated AppWrapper with admin auto-logout logic
 const AppWrapper = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const isAdminRoute = location.pathname.startsWith("/admin");
-  const isAdminLoggedIn = user?.role === "admin";
+
+  // ✅ Auto-logout admin when visiting user routes
+  useEffect(() => {
+    if (!isAdminRoute && user?.role === "admin") {
+      logout();
+    }
+  }, [isAdminRoute, user, logout]);
 
   return (
     <>
       {!isAdminRoute && <Navbar />}
-      {isAdminRoute && isAdminLoggedIn && <AdminNavbar />}
-
-      {/* Render nested routes */}
+      {isAdminRoute && user?.role === "admin" && <AdminNavbar />}
       <Outlet />
-
       {!isAdminRoute && <Footer />}
     </>
   );
 };
 
-// Define routes array for createBrowserRouter
+// ✅ Routes definition
 const router = createBrowserRouter(
   [
     {
@@ -82,13 +92,13 @@ const router = createBrowserRouter(
     },
   ],
   {
-    // Optional future flag (keep if you want)
     future: {
       v7_relativeSplatPath: true,
     },
   }
 );
 
+// ✅ App entry point
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>

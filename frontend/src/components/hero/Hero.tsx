@@ -66,11 +66,6 @@ export default function Hero() {
             <Link to="/shop">
               <Button variant="hero">Shop Now</Button>
             </Link>
-            <Link to="/about">
-              <Button variant="outline" className="text-black border-white">
-                Learn More
-              </Button>
-            </Link>
           </motion.div>
         </div>
       </div>

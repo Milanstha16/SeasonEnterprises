@@ -11,9 +11,9 @@ export type Product = {
 };
 
 const products: Product[] = [
-  { id: "sb01", name: "Brass Singing Bowl Set", price: 79, image: bowl, category: "Sound Healing", rating: 4.8, threeD: true },
-  { id: "wk02", name: "Hand‑Carved Wooden Buddha", price: 129, image: bowl, category: "Wood Carvings", rating: 4.9 },
-  { id: "dh03", name: "Dhaka Weave Scarf", price: 45, image: bowl, category: "Textiles", rating: 4.6 },
+  { id: "sb01", name: "Product 1", price: 79, image: bowl, category: "Sound Healing"},
+  { id: "wk02", name: "Product 2", price: 129, image: bowl, category: "Wood Carvings"},
+  { id: "dh03", name: "Product 3", price: 45, image: bowl, category: "Clothes"},
 
 ];
 
