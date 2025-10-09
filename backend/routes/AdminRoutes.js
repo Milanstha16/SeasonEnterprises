@@ -1,6 +1,6 @@
 import express from 'express';
-import { protect } from '../middleware/authMiddleware.js';
-import { requireAdmin } from '../admin/adminMiddleware.js';
+import protect from '../middleware/authMiddleware.js';
+import requireAdmin from '../admin/adminMiddleware.js';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
 
@@ -11,25 +11,51 @@ router.use(protect, requireAdmin);
 
 // Quick stats for AdminDashboard
 router.get('/stats', async (req, res) => {
-try {
-const [totalUsers, totalProducts] = await Promise.all([
-User.countDocuments(),
-Product.countDocuments(),
-]);
-res.json({ totalUsers, totalProducts });
-} catch (err) {
-res.status(500).json({ msg: 'Failed to fetch stats' });
-}
+  try {
+    const [totalUsers, totalProducts] = await Promise.all([
+      User.countDocuments(),
+      Product.countDocuments(),
+    ]);
+    res.json({ totalUsers, totalProducts });
+  } catch (err) {
+    res.status(500).json({ msg: 'Failed to fetch stats' });
+  }
 });
 
-// Example: list all products (admin view)
+// List all products (admin view)
 router.get('/products', async (req, res) => {
-try {
-const products = await Product.find().sort({ createdAt: -1 });
-res.json(products);
-} catch (err) {
-res.status(500).json({ msg: 'Failed to fetch products' });
-}
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ msg: 'Failed to fetch products' });
+  }
+});
+
+// ✅ Add new product (admin only)
+router.post('/add-product', async (req, res) => {
+  try {
+    const { name, description, price, category, stock, image } = req.body;
+
+    if (!name || !price) {
+      return res.status(400).json({ msg: 'Name and price are required' });
+    }
+
+    const product = new Product({
+      name,
+      description,
+      price,
+      category,
+      stock,
+      image,
+    });
+
+    await product.save();
+    res.status(201).json({ msg: 'Product added successfully', product });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Failed to add product' });
+  }
 });
 
 export default router;

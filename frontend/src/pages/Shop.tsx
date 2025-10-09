@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/hooks/use-toast";
+import axios from "axios";
 
 // ✅ Product type
 interface Product {
-  id: string;
+  _id: string;
   name: string;
   price: number;
   description: string;
@@ -15,71 +16,37 @@ interface Product {
   category: string;
   rating?: number;
   threeD?: boolean;
+  stock?: number;
 }
-
-const products: Product[] = [
-  {
-    id: "1",
-    name: "Handmade Silver Necklace",
-    price: 45,
-    description: "A beautiful handmade silver necklace crafted by artisans in Nepal.",
-    image: "/products/silver-necklace.jpg",
-    category: "Jewelry",
-  },
-  {
-    id: "2",
-    name: "Dhaka Fabric Scarf",
-    price: 25,
-    description: "Traditional Nepali Dhaka scarf with intricate woven patterns.",
-    image: "/products/dhaka-scarf.jpg",
-    category: "Clothing",
-  },
-  {
-    id: "3",
-    name: "Singing Bowl",
-    price: 35,
-    description: "Brass singing bowl with wooden mallet – perfect for meditation.",
-    image: "/products/singing-bowl.jpg",
-    category: "Spirituality",
-  },
-  {
-    id: "4",
-    name: "Carved Wooden Mask",
-    price: 55,
-    description: "Traditional hand-carved wooden mask from the Kathmandu Valley.",
-    image: "/products/wooden-mask.jpg",
-    category: "Home Decor",
-  },
-  {
-    id: "5",
-    name: "Nepali Felt Coasters (Set of 4)",
-    price: 18,
-    description: "Colorful, handmade felt coasters to brighten up your space.",
-    image: "/products/felt-coasters.jpg",
-    category: "Home Decor",
-  },
-  {
-    id: "6",
-    name: "Tibetan Prayer Flags",
-    price: 12,
-    description: "5-meter long set of vibrant prayer flags for peace and prosperity.",
-    image: "/products/prayer-flags.jpg",
-    category: "Spirituality",
-  },
-];
 
 export default function Shop() {
   const navigate = useNavigate();
   const { add } = useCart();
+
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
+  // ✅ Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/products");
+        setProducts(res.data);
+      } catch (err) {
+        console.error("Failed to load products:", err);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
   const handleAddToCart = (product: Product) => {
     add({
-      id: product.id,
+      id: product._id,
       name: product.name,
       price: product.price,
-      image: product.image,
+      image: `/uploads/${product.image}`,
     });
 
     toast({
@@ -91,7 +58,7 @@ export default function Shop() {
   const handleBuyNow = (product: Product) => {
     toast({
       title: "Proceeding to checkout..",
-      description: ` ${product.name}`,
+      description: `${product.name}`,
     });
     navigate("/checkout");
   };
@@ -146,7 +113,7 @@ export default function Shop() {
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
               <motion.div
-                key={product.id}
+                key={product._id}
                 className="border rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -154,21 +121,15 @@ export default function Shop() {
                 transition={{ duration: 0.4 }}
               >
                 <img
-                  src={product.image}
+                  src={`http://localhost:5000/uploads/${product.image}`}
                   alt={product.name}
                   className="w-full h-64 object-cover"
                 />
                 <div className="p-5 flex flex-col flex-grow">
                   <h2 className="text-xl font-semibold mb-1">{product.name}</h2>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {product.category}
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {product.description}
-                  </p>
-                  <p className="text-lg font-medium mb-4">
-                    ${product.price.toFixed(2)}
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">{product.category}</p>
+                  <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
+                  <p className="text-lg font-medium mb-4">${product.price.toFixed(2)}</p>
 
                   <div className="mt-auto flex gap-2">
                     <motion.button
@@ -178,11 +139,7 @@ export default function Shop() {
                     >
                       Add to Cart
                     </motion.button>
-                    <Button
-                      variant="default"
-                      className="w-full"
-                      onClick={() => handleBuyNow(product)}
-                    >
+                    <Button variant="default" className="w-full" onClick={() => handleBuyNow(product)}>
                       Buy Now
                     </Button>
                   </div>
@@ -190,9 +147,7 @@ export default function Shop() {
               </motion.div>
             ))
           ) : (
-            <p className="col-span-full text-center text-muted-foreground">
-              No products found.
-            </p>
+            <p className="col-span-full text-center text-muted-foreground">No products found.</p>
           )}
         </div>
       </div>

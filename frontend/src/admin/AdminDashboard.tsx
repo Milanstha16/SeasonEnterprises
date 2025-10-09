@@ -4,12 +4,20 @@ import { Button } from "@/components/ui/button";
 
 const AdminDashboard = () => {
   const { token } = useAuth();
+
   const [products, setProducts] = useState([]);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    price: "",
+    category: "",
+    stock: "",
+    image: null as File | null,
+  });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchProducts = async () => {
     try {
@@ -26,41 +34,70 @@ const AdminDashboard = () => {
     fetchProducts();
   }, []);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setForm((prev) => ({ ...prev, image: e.target.files![0] }));
+    }
+  };
+
   const handleAdd = async () => {
-    if (!name.trim() || !price.trim()) {
-      setError("Please enter both name and price.");
+    const { name, description, price, category, stock, image } = form;
+
+    if (!name || !price || !category || !stock || !image) {
+      setError("All fields are required.");
       return;
     }
+
     setLoading(true);
     setError("");
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("description", description);
+    formData.append("price", price);
+    formData.append("category", category);
+    formData.append("stock", stock);
+    if (image) formData.append("image", image);
+
     try {
-      const res = await fetch("http://localhost:5000/api/products", {
+      const res = await fetch("http://localhost:5000/api/products/add", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, price: parseFloat(price) }),
+        body: formData,
       });
 
       const data = await res.json();
+
       if (!res.ok) {
-        setError(data.msg || "Error adding product");
-        setLoading(false);
+        setError(data.error || "Failed to add product.");
         return;
       }
 
-      setProducts((prev) => [...prev, data]);
-      setName("");
-      setPrice("");
+      setProducts((prev) => [...prev, data.product]);
+      setForm({
+        name: "",
+        description: "",
+        price: "",
+        category: "",
+        stock: "",
+        image: null,
+      });
     } catch (err) {
       console.error(err);
       setError("Server error");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
       const res = await fetch(`http://localhost:5000/api/products/${id}`, {
@@ -69,13 +106,15 @@ const AdminDashboard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (!res.ok) throw new Error("Delete failed");
       setProducts((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
       console.error(err);
       setError("Failed to delete product");
+    } finally {
+      setDeletingId(null);
     }
-    setDeletingId(null);
   };
 
   return (
@@ -92,34 +131,60 @@ const AdminDashboard = () => {
       {/* Add Product Form */}
       <section className="mb-12 bg-white p-6 rounded-xl shadow-md">
         <h2 className="text-2xl font-semibold mb-4">Add New Product</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <input
             type="text"
+            name="name"
             placeholder="Product Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="col-span-1 px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+            value={form.name}
+            onChange={handleChange}
+            className="px-4 py-3 rounded-md border border-gray-300"
           />
           <input
             type="number"
+            name="price"
             placeholder="Price"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="col-span-1 px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
-            min="0"
-            step="1"
+            value={form.price}
+            onChange={handleChange}
+            className="px-4 py-3 rounded-md border border-gray-300"
           />
-          <Button
-            onClick={handleAdd}
-            disabled={loading}
-            className="col-span-1 h-full"
-          >
-            {loading ? "Adding..." : "Add Product"}
-          </Button>
+          <input
+            type="text"
+            name="category"
+            placeholder="Category"
+            value={form.category}
+            onChange={handleChange}
+            className="px-4 py-3 rounded-md border border-gray-300"
+          />
+          <input
+            type="number"
+            name="stock"
+            placeholder="Stock"
+            value={form.stock}
+            onChange={handleChange}
+            className="px-4 py-3 rounded-md border border-gray-300"
+          />
+          <textarea
+            name="description"
+            placeholder="Description"
+            value={form.description}
+            onChange={handleChange}
+            className="col-span-1 md:col-span-2 px-4 py-3 rounded-md border border-gray-300"
+          />
+          <input
+            type="file"
+            name="image"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="col-span-1 md:col-span-2"
+          />
         </div>
+        <Button onClick={handleAdd} disabled={loading}>
+          {loading ? "Adding..." : "Add Product"}
+        </Button>
       </section>
 
-      {/* Products Section */}
+      {/* Product List */}
       <section className="bg-white p-6 rounded-xl shadow-md">
         <h2 className="text-2xl font-semibold mb-6">Manage Products</h2>
 
@@ -128,21 +193,24 @@ const AdminDashboard = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
-              <div
-                key={product._id}
-                className="border rounded-lg p-4 shadow-sm flex flex-col justify-between"
-              >
+              <div key={product._id} className="border rounded-lg p-4 shadow-sm flex flex-col justify-between">
                 <div>
-                  <h3 className="text-lg font-medium mb-2">{product.name}</h3>
-                  <p className="text-gray-700 mb-4">
-                    Price: ${parseFloat(product.price).toFixed(2)}
-                  </p>
+                  <img
+                    src={`http://localhost:5000/uploads/${product.image}`}
+                    alt={product.name}
+                    className="h-40 w-full object-cover mb-3 rounded"
+                  />
+                  <h3 className="text-lg font-medium mb-1">{product.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-1">Category: {product.category}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Stock: {product.stock}</p>
+                  <p className="text-gray-700">Price: ${parseFloat(product.price).toFixed(2)}</p>
                 </div>
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => handleDelete(product._id)}
                   disabled={deletingId === product._id}
+                  className="mt-3"
                 >
                   {deletingId === product._id ? "Deleting..." : "Delete"}
                 </Button>

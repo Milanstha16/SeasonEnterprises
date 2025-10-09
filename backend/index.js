@@ -2,23 +2,29 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Route imports
 import ProductRoutes from "./routes/ProductRoutes.js";
 import AuthRoutes from "./routes/AuthRoutes.js";
+import AdminRoutes from "./routes/AdminRoutes.js";
 
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-console.log("JWT_SECRET loaded:", process.env.JWT_SECRET ? "Yes" : "No");
+// Fix __dirname in ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// ✅ Updated CORS config to support dynamic IPs (e.g. 192.168.x.x)
+// CORS
 const corsOptions = {
   origin: function (origin, callback) {
     if (
-      !origin || // allow non-browser clients like Postman
-      origin === "http://localhost:8080" || // allow localhost
-      /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) // allow any 192.168.x.x:port
+      !origin ||
+      origin === "http://localhost:8080" ||
+      /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin)
     ) {
       callback(null, true);
     } else {
@@ -33,21 +39,29 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// ✅ Serve uploaded images from /uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ✅ Routes
+app.use("/api/products", ProductRoutes); // ✅ FIXED: mounts correctly
+app.use("/api/auth", AuthRoutes);
+app.use("/api/admin", AdminRoutes);
+
+// ✅ Test route
 app.get("/", (req, res) => {
   res.send("API is running!");
 });
 
-app.use("/api", ProductRoutes);
-app.use("/api/auth", AuthRoutes);
-
+// ✅ MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("MongoDB connected"))
+  .then(() => {
+    console.log("MongoDB connected");
+    app.listen(PORT, () =>
+      console.log(`Server running on http://localhost:${PORT}`)
+    );
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
