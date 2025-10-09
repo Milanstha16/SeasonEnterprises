@@ -4,7 +4,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import ProductRoutes from "./routes/ProductRoutes.js";
 import AuthRoutes from "./routes/AuthRoutes.js";
-import PaymentRoutes from "./routes/PaymentRoutes.js";
 
 dotenv.config();
 
@@ -40,7 +39,6 @@ app.get("/", (req, res) => {
 
 app.use("/api", ProductRoutes);
 app.use("/api/auth", AuthRoutes);
-app.use("/api", PaymentRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI, {
