@@ -79,85 +79,78 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8 bg-white rounded-xl shadow-md">
-      <h1 className="text-3xl font-semibold mb-8 text-center">Admin Dashboard</h1>
+    <div className="max-w-5xl mx-auto p-6 md:p-10">
+      <h1 className="text-4xl font-bold text-center mb-10">Admin Dashboard</h1>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 px-4 py-3 bg-red-100 text-red-700 border border-red-300 rounded-md text-center">
+          {error}
+        </div>
+      )}
 
       {/* Add Product Form */}
-      <div className="mb-10 p-6 bg-gray-50 rounded-lg shadow-inner">
-        {error && (
-          <p className="mb-4 text-red-600 font-medium text-center">{error}</p>
-        )}
-
-        <div className="flex flex-col md:flex-row gap-4 max-w-xl mx-auto">
+      <section className="mb-12 bg-white p-6 rounded-xl shadow-md">
+        <h2 className="text-2xl font-semibold mb-4">Add New Product</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <input
             type="text"
             placeholder="Product Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 px-4 py-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="col-span-1 px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <input
             type="number"
             placeholder="Price"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-32 px-4 py-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="col-span-1 px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
             min="0"
-            step="0.01"
+            step="1"
           />
           <Button
             onClick={handleAdd}
             disabled={loading}
-            className="w-full md:w-auto"
+            className="col-span-1 h-full"
           >
             {loading ? "Adding..." : "Add Product"}
           </Button>
         </div>
-      </div>
+      </section>
 
-      {/* Products Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="bg-primary text-white">
-              <th className="p-4 rounded-tl-lg">Name</th>
-              <th className="p-4">Price</th>
-              <th className="p-4 rounded-tr-lg">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0 && (
-              <tr>
-                <td
-                  colSpan={3}
-                  className="text-center p-6 text-gray-500 italic"
-                >
-                  No products found.
-                </td>
-              </tr>
-            )}
-            {products.map((p) => (
-              <tr
-                key={p._id}
-                className="border-b hover:bg-gray-50 transition-colors"
+      {/* Products Section */}
+      <section className="bg-white p-6 rounded-xl shadow-md">
+        <h2 className="text-2xl font-semibold mb-6">Manage Products</h2>
+
+        {products.length === 0 ? (
+          <p className="text-gray-500 italic text-center">No products found.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map((product) => (
+              <div
+                key={product._id}
+                className="border rounded-lg p-4 shadow-sm flex flex-col justify-between"
               >
-                <td className="p-4 font-medium">{p.name}</td>
-                <td className="p-4">${parseFloat(p.price).toFixed(2)}</td>
-                <td className="p-4">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(p._id)}
-                    disabled={deletingId === p._id}
-                  >
-                    {deletingId === p._id ? "Deleting..." : "Delete"}
-                  </Button>
-                </td>
-              </tr>
+                <div>
+                  <h3 className="text-lg font-medium mb-2">{product.name}</h3>
+                  <p className="text-gray-700 mb-4">
+                    Price: ${parseFloat(product.price).toFixed(2)}
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(product._id)}
+                  disabled={deletingId === product._id}
+                >
+                  {deletingId === product._id ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 };
