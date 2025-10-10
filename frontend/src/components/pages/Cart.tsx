@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/components/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
 

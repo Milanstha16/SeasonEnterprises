@@ -1,4 +1,4 @@
-import products from "@/data/products";
+import products from "@/components/products/products";
 import ProductCard from "./ProductCard";
 
 export default function ProductGrid() {

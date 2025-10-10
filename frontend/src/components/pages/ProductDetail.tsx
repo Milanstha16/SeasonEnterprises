@@ -1,10 +1,10 @@
 import { useParams } from "react-router-dom";
-import products from "@/data/products";
+import products from "@/components/products/products";
 import { Button } from "@/components/ui/button";
 import ProductViewer3D from "@/components/three/ProductViewer3D";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/components/context/CartContext";
 import { Helmet } from "react-helmet-async";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/hooks/use-toast";
 
 export default function ProductDetail() {
   const { id } = useParams();

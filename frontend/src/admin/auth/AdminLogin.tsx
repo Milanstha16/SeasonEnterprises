@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserShield } from "react-icons/fa";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/components/context/AuthContext";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");

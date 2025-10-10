@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/context/CartContext";
-import { toast } from "@/hooks/use-toast";
+import { useCart } from "@/components/context/CartContext";
+import { toast } from "@/components/hooks/use-toast";
 
 export interface Product {
   id: string;

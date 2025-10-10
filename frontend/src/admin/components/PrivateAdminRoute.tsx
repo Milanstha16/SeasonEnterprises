@@ -1,6 +1,6 @@
 // frontend/components/PrivateAdminRoute.jsx
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/components/context/AuthContext";
 
 const PrivateAdminRoute: React.FC<{ children: JSX.Element }> = ({ children }) => {
   const { token, user } = useAuth();

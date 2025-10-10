@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
-const AdminDashboard = () => {
+const AddProduct = () => {
   const { token } = useAuth();
 
   const [products, setProducts] = useState([]);
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-10">
-      <h1 className="text-4xl font-bold text-center mb-10">Admin Dashboard</h1>
+      <h1 className="text-4xl font-bold text-center mb-10">Add Products</h1>
 
       {/* Error Message */}
       {error && (
@@ -223,4 +223,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default AddProduct;

@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/hooks/use-toast";
 import { useLocation } from 'react-router-dom';
 
 export default function ContactPage() {

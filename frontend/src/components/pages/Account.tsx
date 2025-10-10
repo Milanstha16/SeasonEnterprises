@@ -1,4 +1,4 @@
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/components/context/AuthContext";
 
 const Account = () => {
   const { user } = useAuth();

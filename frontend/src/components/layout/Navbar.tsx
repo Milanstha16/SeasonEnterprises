@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/context/AuthContext"; // ✅ Import useAuth
+import { useAuth } from "@/components/context/AuthContext"; // ✅ Import useAuth
 
 export default function Navbar() {
   const { user, logout } = useAuth(); // ✅ Get user and logout from context

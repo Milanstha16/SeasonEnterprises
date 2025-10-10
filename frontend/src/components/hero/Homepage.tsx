@@ -1,5 +1,5 @@
 import { motion, useScroll, useTransform } from "framer-motion";
-import heroImage from "@/assets/hero-nepal-crafts.jpg";
+import heroImage from "../assets/hero-nepal-crafts.jpg";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 

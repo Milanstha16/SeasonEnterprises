@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import Hero from "@/components/hero/Hero";
+import Hero from "@/components/hero/Homepage";
 import ProductGrid from "@/components/products/ProductGrid";
 
 const Index = () => {

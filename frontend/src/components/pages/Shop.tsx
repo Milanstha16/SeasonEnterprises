@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import { useCart } from "@/context/CartContext";
-import { toast } from "@/hooks/use-toast";
+import { useCart } from "@/components/context/CartContext";
+import { toast } from "@/components/hooks/use-toast";
 import axios from "axios";
 
 // ✅ Product type
@@ -19,6 +19,9 @@ interface Product {
   stock?: number;
 }
 
+// ✅ Base URL for image paths
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 export default function Shop() {
   const navigate = useNavigate();
   const { add } = useCart();
@@ -31,7 +34,7 @@ export default function Shop() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/products");
+        const res = await axios.get(`${BASE_URL}/api/products`);
         setProducts(res.data);
       } catch (err) {
         console.error("Failed to load products:", err);
@@ -41,12 +44,13 @@ export default function Shop() {
     fetchProducts();
   }, []);
 
+  // ✅ Add to Cart
   const handleAddToCart = (product: Product) => {
     add({
       id: product._id,
       name: product.name,
       price: product.price,
-      image: `/uploads/${product.image}`,
+      image: `${BASE_URL}/uploads/${product.image}`, // ✅ Fixed image path
     });
 
     toast({
@@ -121,7 +125,7 @@ export default function Shop() {
                 transition={{ duration: 0.4 }}
               >
                 <img
-                  src={`http://localhost:5000/uploads/${product.image}`}
+                  src={`${BASE_URL}/uploads/${product.image}`}
                   alt={product.name}
                   className="w-full h-64 object-cover"
                 />

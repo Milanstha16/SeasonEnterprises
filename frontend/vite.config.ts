@@ -7,14 +7,19 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      // Proxy API requests to the backend
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
-  plugins: [
-    react(), // Keep the React plugin
-    // Removed lovable-tagger plugin
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // Alias for easier imports
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 }));

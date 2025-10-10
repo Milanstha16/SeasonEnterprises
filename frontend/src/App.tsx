@@ -9,85 +9,141 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import ProductDetail from "./pages/ProductDetail";
-import CartPage from "./pages/Cart";
-import CheckoutPage from "./pages/Checkout";
-import ContactPage from "./pages/Contact";
-import AccountPage from "./pages/Account";
-import Signin from "./pages/Signin";
-import Signup from "./pages/Signup";
-import Shop from "./pages/Shop";
-
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import AdminNavbar from "./admin/AdminNavbar";
 
-import AdminLogin from "./admin/AdminLogin";
-import AdminDashboard from "./admin/AdminDashboard";
-import PrivateAdminRoute from "./admin/PrivateAdminRoute";
+import Index from "./components/pages/Index";
+import NotFound from "./components/pages/NotFound";
+import ProductDetail from "./components/pages/ProductDetail";
+import CartPage from "./components/pages/Cart";
+import CheckoutPage from "./components/pages/Checkout";
+import ContactPage from "./components/pages/Contact";
+import AccountPage from "./components/pages/Account";
+import Signin from "./components/pages/Signin";
+import Signup from "./components/pages/Signup";
+import Shop from "./components/pages/Shop";
 
-import { CartProvider } from "@/context/CartContext";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import AdminLogin from "./admin/auth/AdminLogin";
+import PrivateAdminRoute from "./admin/components/PrivateAdminRoute";
+import AdminNavbar from "./admin/components/AdminNavbar";
+import AdminDashboard from "./admin/components/AdminDashboard";
+
+import ProductsList from "./admin/Products/ProductsList";
+import ProductForm from "./admin/Products/ProductForm";
+import ProductDetails from "./admin/Products/ProductDetails";
+
+import UsersList from "./admin/Users/UsersList";
+import UserDetails from "./admin/Users/UserDetails";
+import UserForm from "./admin/Users/UserForm";
+
+import OrdersList from "./admin/Orders/OrdersList";
+import OrderDetails from "./admin/Orders/OrderDetails";
+import OrderStatusUpdate from "./admin/Orders/OrderStatusUpdate";
+
+import Settings from "./admin/Settings/Settings";
+
+import { CartProvider } from "@/components/context/CartContext";
+import { AuthProvider, useAuth } from "@/components/context/AuthContext";
 import { HelmetProvider } from "react-helmet-async";
-
 import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+// ✅ Public Layout (Navbar + Footer)
+const PublicLayout = () => {
+  return (
+    <>
+      <Navbar />
+      <Outlet />
+      <Footer />
+    </>
+  );
+};
 
-// ✅ Updated AppWrapper with admin auto-logout logic
+// ✅ Admin Layout (AdminNavbar for logged-in admins)
+const AdminLayout = () => {
+  const { user } = useAuth();
+
+  return (
+    <>
+      {user?.role === "admin" && <AdminNavbar />}
+      <div className="min-h-screen bg-muted/20 p-4 md:p-6">
+        <Outlet />
+      </div>
+    </>
+  );
+};
+
+// ✅ AppWrapper: Clears admin session if accessing public pages
 const AppWrapper = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
 
   const isAdminRoute = location.pathname.startsWith("/admin");
 
-  // ✅ Auto-logout admin when visiting user routes
   useEffect(() => {
     if (!isAdminRoute && user?.role === "admin") {
       logout();
     }
   }, [isAdminRoute, user, logout]);
 
-  return (
-    <>
-      {!isAdminRoute && <Navbar />}
-      {isAdminRoute && user?.role === "admin" && <AdminNavbar />}
-      <Outlet />
-      {!isAdminRoute && <Footer />}
-    </>
-  );
+  return <Outlet />;
 };
 
-// ✅ Routes definition
+// ✅ Define routes
 const router = createBrowserRouter(
   [
     {
-      path: "/",
       element: <AppWrapper />,
       children: [
-        { path: "/", element: <Index /> },
-        { path: "product/:id", element: <ProductDetail /> },
-        { path: "cart", element: <CartPage /> },
-        { path: "checkout", element: <CheckoutPage /> },
-        { path: "contact", element: <ContactPage /> },
-        { path: "account", element: <AccountPage /> },
-        { path: "signin", element: <Signin /> },
-        { path: "signup", element: <Signup /> },
-        { path: "shop", element: <Shop /> },
-
-        { path: "adminlogin", element: <AdminLogin /> },
         {
-          path: "admin",
-          element: (
-            <PrivateAdminRoute>
-              <AdminDashboard />
-            </PrivateAdminRoute>
-          ),
+          path: "/",
+          element: <PublicLayout />,
+          children: [
+            { index: true, element: <Index /> },
+            { path: "product/:id", element: <ProductDetail /> },
+            { path: "cart", element: <CartPage /> },
+            { path: "checkout", element: <CheckoutPage /> },
+            { path: "contact", element: <ContactPage /> },
+            { path: "account", element: <AccountPage /> },
+            { path: "signin", element: <Signin /> },
+            { path: "signup", element: <Signup /> },
+            { path: "shop", element: <Shop /> },
+          ],
         },
 
-        { path: "*", element: <NotFound /> },
+        // ✅ Admin login (no layout)
+        {
+          path: "/adminlogin",
+          element: <AdminLogin />,
+        },
+
+        // ✅ Admin protected routes
+        {
+          path: "/admin",
+          element: (
+            <PrivateAdminRoute>
+              <AdminLayout />
+            </PrivateAdminRoute>
+          ),
+          children: [
+            { index: true, element: <AdminDashboard /> },
+            { path: "products", element: <ProductsList /> },
+            { path: "products/new", element: <ProductForm /> },
+            { path: "products/:id", element: <ProductDetails /> },
+            { path: "users", element: <UsersList /> },
+            { path: "users/new", element: <UserForm /> },
+            { path: "users/:id", element: <UserDetails /> },
+            { path: "orders", element: <OrdersList /> },
+            { path: "orders/:id", element: <OrderDetails /> },
+            { path: "orders/:id/update", element: <OrderStatusUpdate /> },
+            { path: "settings", element: <Settings /> },
+          ],
+        },
+
+        // ✅ Catch all
+        {
+          path: "*",
+          element: <NotFound />,
+        },
       ],
     },
   ],
@@ -98,9 +154,9 @@ const router = createBrowserRouter(
   }
 );
 
-// ✅ App entry point
+// ✅ App Entry
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <QueryClientProvider client={new QueryClient()}>
     <TooltipProvider>
       <HelmetProvider>
         <AuthProvider>
