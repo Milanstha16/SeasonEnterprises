@@ -18,7 +18,7 @@ const ProductDetails = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) throw new Error("Failed fetch");
+      if (!res.ok) throw new Error("Failed to fetch product");
       const data = await res.json();
       setProduct(data);
     } catch (err) {
@@ -31,22 +31,56 @@ const ProductDetails = () => {
     if (id) fetchProduct();
   }, [id]);
 
-  if (error) return <p className="text-red-600 p-6">{error}</p>;
-  if (!product) return <p className="p-6">Loading...</p>;
+  if (error)
+    return (
+      <div className="p-6">
+        <p className="text-red-600 font-semibold">{error}</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+          Go Back
+        </Button>
+      </div>
+    );
+
+  if (!product)
+    return (
+      <div className="p-6 text-center text-black">
+        <p>Loading product details...</p>
+      </div>
+    );
 
   return (
-    <div className="p-6">
-      <Button onClick={() => navigate(-1)}>Back</Button>
-      <h1 className="text-2xl font-semibold mt-4 mb-4">{product.name}</h1>
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="flex gap-4 mb-6">
+        <Button onClick={() => navigate(-1)}>Back</Button>
+        <Button
+          variant="secondary"
+          onClick={() => navigate(`/admin/products/edit/${id}`)}
+        >
+          Edit
+        </Button>
+      </div>
+
+      <h1 className="text-3xl font-semibold mb-4 text-black">{product.name}</h1>
+
       <img
         src={`http://localhost:5000/uploads/${product.image}`}
         alt={product.name}
-        className="w-full max-h-96 object-cover rounded mb-4"
+        className="w-full max-h-96 object-cover rounded-lg shadow-md mb-6"
       />
-      <p><strong>Category:</strong> {product.category}</p>
-      <p><strong>Stock:</strong> {product.stock}</p>
-      <p><strong>Price:</strong> {product.price}</p>
-      <p className="mt-4">{product.description}</p>
+
+      <div className="space-y-2 text-black text-lg">
+        <p>
+          <strong className="font-semibold">Category:</strong> {product.category}
+        </p>
+        <p>
+          <strong className="font-semibold">Stock:</strong> {product.stock}
+        </p>
+        <p>
+          <strong className="font-semibold">Price:</strong> ${product.price}
+        </p>
+      </div>
+
+      <p className="mt-6 text-black leading-relaxed">{product.description}</p>
     </div>
   );
 };

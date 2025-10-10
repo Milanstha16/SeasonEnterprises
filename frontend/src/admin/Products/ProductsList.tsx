@@ -15,7 +15,7 @@ const ProductsList = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) throw new Error("Failed fetch");
+      if (!res.ok) throw new Error("Failed to fetch products");
       const data = await res.json();
       setProducts(data);
     } catch (err) {
@@ -29,29 +29,46 @@ const ProductsList = () => {
   }, []);
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold">Products</h1>
+    <div className="p-6 bg-indigo-50 min-h-screen">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-black">Products</h1>
         <Link to="/admin/products/new">
-          <Button>Add Product</Button>
+          <Button className="bg-indigo-700 hover:bg-indigo-800 text-white">Add Product</Button>
         </Link>
       </div>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      {/* Error message */}
+      {error && (
+        <p className="text-red-600 mb-4 bg-red-100 p-3 rounded border border-red-200">
+          {error}
+        </p>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Product Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
-          <div key={product._id} className="border p-4 rounded-lg">
+          <div
+            key={product._id}
+            className="bg-white border border-indigo-100 p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300"
+          >
             <img
               src={`http://localhost:5000/uploads/${product.image}`}
               alt={product.name}
-              className="h-40 w-full object-cover mb-2 rounded"
+              className="h-48 w-full object-cover rounded-lg mb-3"
             />
-            <h2 className="font-semibold">{product.name}</h2>
-            <p>Price: {product.price}</p>
-            <p>Stock: {product.stock}</p>
+            <h2 className="text-lg font-semibold text-black">{product.name}</h2>
+            <p className="text-black text-sm mb-1">
+              Price: <span className="font-medium">${product.price}</span>
+            </p>
+            <p className="text-black text-sm mb-3">Stock: {product.stock}</p>
             <Link to={`/admin/products/${product._id}`}>
-              <Button size="sm">View</Button>
+              <Button
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white w-full"
+              >
+                View
+              </Button>
             </Link>
           </div>
         ))}

@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 
-const authMiddleware = (req, res, next) => {
+// Middleware to check token & set req.user
+export const protect = (req, res, next) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
     if (!token) {
@@ -16,4 +17,11 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-export default authMiddleware;
+// Middleware to allow only admin users
+export const adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    res.status(403).json({ msg: "Admin access required" });
+  }
+};

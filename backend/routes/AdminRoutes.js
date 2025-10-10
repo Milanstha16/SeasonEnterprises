@@ -1,13 +1,12 @@
 import express from 'express';
-import protect from '../middleware/authMiddleware.js';
-import requireAdmin from '../admin/adminMiddleware.js';
+import { protect, adminOnly } from '../middleware/authMiddleware.js';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
 
 const router = express.Router();
 
 // All admin routes are protected + admin only
-router.use(protect, requireAdmin);
+router.use(protect, adminOnly);
 
 // Quick stats for AdminDashboard
 router.get('/stats', async (req, res) => {

@@ -34,7 +34,9 @@ const AddProduct = () => {
     fetchProducts();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -118,8 +120,10 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-10">
-      <h1 className="text-4xl font-bold text-center mb-10">Add Products</h1>
+    <div className="max-w-5xl mx-auto p-6 md:p-10 bg-indigo-50 min-h-screen">
+      <h1 className="text-4xl font-bold text-black text-center mb-10">
+        Add Products
+      </h1>
 
       {/* Error Message */}
       {error && (
@@ -129,8 +133,10 @@ const AddProduct = () => {
       )}
 
       {/* Add Product Form */}
-      <section className="mb-12 bg-white p-6 rounded-xl shadow-md">
-        <h2 className="text-2xl font-semibold mb-4">Add New Product</h2>
+      <section className="mb-12 bg-white p-6 rounded-xl shadow-md border border-indigo-100">
+        <h2 className="text-2xl font-semibold text-black mb-4">
+          Add New Product
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <input
             type="text"
@@ -138,7 +144,7 @@ const AddProduct = () => {
             placeholder="Product Name"
             value={form.name}
             onChange={handleChange}
-            className="px-4 py-3 rounded-md border border-gray-300"
+            className="px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
           />
           <input
             type="number"
@@ -146,7 +152,7 @@ const AddProduct = () => {
             placeholder="Price"
             value={form.price}
             onChange={handleChange}
-            className="px-4 py-3 rounded-md border border-gray-300"
+            className="px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
           />
           <input
             type="text"
@@ -154,7 +160,7 @@ const AddProduct = () => {
             placeholder="Category"
             value={form.category}
             onChange={handleChange}
-            className="px-4 py-3 rounded-md border border-gray-300"
+            className="px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
           />
           <input
             type="number"
@@ -162,14 +168,14 @@ const AddProduct = () => {
             placeholder="Stock"
             value={form.stock}
             onChange={handleChange}
-            className="px-4 py-3 rounded-md border border-gray-300"
+            className="px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
           />
           <textarea
             name="description"
             placeholder="Description"
             value={form.description}
             onChange={handleChange}
-            className="col-span-1 md:col-span-2 px-4 py-3 rounded-md border border-gray-300"
+            className="col-span-1 md:col-span-2 px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
           />
           <input
             type="file"
@@ -179,31 +185,50 @@ const AddProduct = () => {
             className="col-span-1 md:col-span-2"
           />
         </div>
-        <Button onClick={handleAdd} disabled={loading}>
+        <Button
+          onClick={handleAdd}
+          disabled={loading}
+          className="bg-indigo-700 hover:bg-indigo-800 text-white"
+        >
           {loading ? "Adding..." : "Add Product"}
         </Button>
       </section>
 
       {/* Product List */}
-      <section className="bg-white p-6 rounded-xl shadow-md">
-        <h2 className="text-2xl font-semibold mb-6">Manage Products</h2>
+      <section className="bg-white p-6 rounded-xl shadow-md border border-indigo-100">
+        <h2 className="text-2xl font-semibold text-black mb-6">
+          Manage Products
+        </h2>
 
         {products.length === 0 ? (
-          <p className="text-gray-500 italic text-center">No products found.</p>
+          <p className="text-gray-500 italic text-center">
+            No products found.
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
-              <div key={product._id} className="border rounded-lg p-4 shadow-sm flex flex-col justify-between">
+              <div
+                key={product._id}
+                className="border border-indigo-100 rounded-xl p-4 shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between"
+              >
                 <div>
                   <img
                     src={`http://localhost:5000/uploads/${product.image}`}
                     alt={product.name}
                     className="h-40 w-full object-cover mb-3 rounded"
                   />
-                  <h3 className="text-lg font-medium mb-1">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-1">Category: {product.category}</p>
-                  <p className="text-sm text-muted-foreground mb-1">Stock: {product.stock}</p>
-                  <p className="text-gray-700">Price: ${parseFloat(product.price).toFixed(2)}</p>
+                  <h3 className="text-lg font-semibold text-black mb-1">
+                    {product.name}
+                  </h3>
+                  <p className="text-sm text-black mb-1">
+                    Category: {product.category}
+                  </p>
+                  <p className="text-sm text-black mb-1">
+                    Stock: {product.stock}
+                  </p>
+                  <p className="text-gray-700 font-medium">
+                    Price: ${parseFloat(product.price).toFixed(2)}
+                  </p>
                 </div>
                 <Button
                   variant="destructive"

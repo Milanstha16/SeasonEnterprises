@@ -3,15 +3,27 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: "user" | "admin";
+}
+
 const UserDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<any | null>(null);
-  const [error, setError] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
 
   const fetchUser = async () => {
+    if (!id) return;
+    setLoading(true);
+    setError("");
     try {
       const res = await fetch(`http://localhost:5000/api/users/${id}`, {
         headers: {
@@ -19,28 +31,84 @@ const UserDetails = () => {
         },
       });
       if (!res.ok) throw new Error("Fetch failed");
-      const data = await res.json();
+      const data: User = await res.json();
       setUser(data);
     } catch (err) {
       console.error(err);
       setError("Could not load user.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    const confirmDelete = window.confirm("Are you sure you want to delete this user?");
+    if (!confirmDelete) return;
+
+    setDeleting(true);
+    setError("");
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Delete failed");
+      }
+      navigate("/admin/users");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to delete user.");
+    } finally {
+      setDeleting(false);
     }
   };
 
   useEffect(() => {
-    if (id) fetchUser();
+    fetchUser();
   }, [id]);
 
+  if (loading) return <p className="p-6">Loading user details...</p>;
   if (error) return <p className="text-red-600 p-6">{error}</p>;
-  if (!user) return <p className="p-6">Loading...</p>;
+  if (!user) return <p className="p-6">No user data available.</p>;
 
   return (
-    <div className="p-6">
-      <Button onClick={() => navigate(-1)}>Back</Button>
-      <h1 className="text-2xl font-semibold mt-4 mb-4">{user.name}</h1>
-      <p><strong>Email:</strong> {user.email}</p>
-      <p><strong>Role:</strong> {user.role}</p>
-      {/* Other user detail fields */}
+    <div className="p-6 max-w-xl mx-auto bg-white shadow-md rounded-lg border">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-800">User Details</h1>
+        <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+      </div>
+
+      <div className="space-y-3 text-gray-700">
+        <div>
+          <span className="font-semibold">Name:</span> {user.name}
+        </div>
+        <div>
+          <span className="font-semibold">Email:</span> {user.email}
+        </div>
+        <div>
+          <span className="font-semibold">Role:</span>{" "}
+          <span className={`inline-block px-2 py-0.5 rounded text-sm font-medium ${
+            user.role === "admin" ? "bg-green-200 text-green-800" : "bg-gray-200 text-gray-700"
+          }`}>
+            {user.role}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <Button
+          variant="destructive"
+          onClick={handleDelete}
+          disabled={deleting}
+        >
+          {deleting ? "Deleting..." : "Delete User"}
+        </Button>
+      </div>
     </div>
   );
 };

@@ -34,13 +34,10 @@ import ProductDetails from "./admin/Products/ProductDetails";
 
 import UsersList from "./admin/Users/UsersList";
 import UserDetails from "./admin/Users/UserDetails";
-import UserForm from "./admin/Users/UserForm";
 
 import OrdersList from "./admin/Orders/OrdersList";
 import OrderDetails from "./admin/Orders/OrderDetails";
 import OrderStatusUpdate from "./admin/Orders/OrderStatusUpdate";
-
-import Settings from "./admin/Settings/Settings";
 
 import { CartProvider } from "@/components/context/CartContext";
 import { AuthProvider, useAuth } from "@/components/context/AuthContext";
@@ -130,12 +127,10 @@ const router = createBrowserRouter(
             { path: "products/new", element: <ProductForm /> },
             { path: "products/:id", element: <ProductDetails /> },
             { path: "users", element: <UsersList /> },
-            { path: "users/new", element: <UserForm /> },
             { path: "users/:id", element: <UserDetails /> },
             { path: "orders", element: <OrdersList /> },
             { path: "orders/:id", element: <OrderDetails /> },
             { path: "orders/:id/update", element: <OrderStatusUpdate /> },
-            { path: "settings", element: <Settings /> },
           ],
         },
 

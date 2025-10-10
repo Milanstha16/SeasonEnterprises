@@ -7,42 +7,34 @@ import {
   FaTachometerAlt,
   FaUsers,
   FaShoppingCart,
-  FaTags,
-  FaChartBar,
-  FaCog,
   FaSignOutAlt,
   FaBars,
   FaTimes,
   FaUserCircle,
 } from "react-icons/fa";
-import { Button } from "@/components/ui/button";
 
 const AdminNavbar = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const profileRef = useRef<HTMLLIElement>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
-  const toggleProfileMenu = () => setProfileMenuOpen((prev) => !prev);
+  const toggleProfileMenu = () => setProfileOpen((prev) => !prev);
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
-  // Close profile dropdown if clicked outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target as Node)
-      ) {
-        setProfileMenuOpen(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -52,84 +44,78 @@ const AdminNavbar = () => {
     { to: "/admin/products", label: "Products", icon: <FaBoxOpen /> },
     { to: "/admin/users", label: "Users", icon: <FaUsers /> },
     { to: "/admin/orders", label: "Orders", icon: <FaShoppingCart /> },
-    { to: "/admin/settings", label: "Settings", icon: <FaCog /> },
   ];
 
   const activeClass =
-    "text-secondary font-semibold border-b-2 border-secondary";
+    "text-indigo-300 font-bold border-b-2 border-indigo-300";
 
   return (
-    <nav className="bg-primary text-white shadow-md z-50">
-      <div className="max-w-screen-xl mx-auto px-4 md:flex md:items-center md:justify-between">
-        {/* Logo & Hamburger */}
-        <div className="flex items-center justify-between py-4 md:py-3">
-          <div className="flex items-center gap-3">
-            <FaUserShield className="text-3xl" />
-            <span className="font-bold text-2xl select-none">Admin Panel</span>
-          </div>
+    <nav className="bg-indigo-700 text-white shadow-md z-50">
+      <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <FaUserShield className="text-3xl text-white" />
+          <span className="text-2xl font-bold select-none">Admin Panel</span>
+        </div>
+
+        {/* Hamburger */}
+        <div className="md:hidden">
           <button
             onClick={toggleMenu}
-            className="md:hidden text-white text-2xl focus:outline-none"
+            className="text-2xl"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
           >
             {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
         </div>
 
-        {/* Navigation Links */}
+        {/* Navigation */}
         <ul
-          className={`flex flex-col md:flex-row md:items-center md:gap-8 transition-all md:transition-none duration-300 ease-in-out overflow-hidden md:overflow-visible ${
-            menuOpen ? "max-h-screen" : "max-h-0"
-          } md:max-h-full`}
+          className={`flex-col md:flex-row md:flex items-center md:gap-8 absolute md:static top-full left-0 w-full md:w-auto bg-indigo-700 transition-all duration-300 ease-in-out md:transition-none overflow-hidden md:overflow-visible ${
+            menuOpen ? "flex" : "hidden md:flex"
+          }`}
         >
           {navLinks.map(({ to, label, icon }) => (
-            <li key={to} className="py-2 md:py-0">
+            <li key={to} className="md:py-0 py-2 border-b border-white/10 md:border-none px-4 md:px-0">
               <NavLink
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 hover:text-secondary transition-colors ${
+                  `flex items-center gap-2 hover:text-indigo-300 transition-colors ${
                     isActive ? activeClass : ""
                   }`
                 }
-                onClick={() => setMenuOpen(false)} // Close mobile menu on click
+                onClick={() => setMenuOpen(false)}
               >
                 <span className="text-lg">{icon}</span> {label}
               </NavLink>
             </li>
           ))}
 
-          {/* Profile Dropdown */}
-          <li
-            className="relative py-2 md:py-0"
-            ref={profileRef}
-            tabIndex={-1}
-            aria-haspopup="true"
-          >
+          {/* Profile */}
+          <div ref={profileRef} className="relative px-4 md:px-0 py-2 md:py-0">
             <button
               onClick={toggleProfileMenu}
-              className="flex items-center gap-2 focus:outline-none"
-              aria-expanded={profileMenuOpen}
-              aria-label="Admin profile menu"
+              className="flex items-center gap-2"
+              aria-haspopup="true"
+              aria-expanded={profileOpen}
             >
               <FaUserCircle className="text-2xl" />
-              <span className="hidden md:inline font-semibold max-w-xs truncate">
+              <span className="hidden md:inline font-medium max-w-[120px] truncate">
                 {user?.name || "Admin"}
               </span>
             </button>
 
-            {profileMenuOpen && (
-              <ul className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                <li>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 hover:bg-secondary hover:text-white transition-colors flex items-center gap-2"
-                  >
-                    <FaSignOutAlt /> Logout
-                  </button>
-                </li>
-              </ul>
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white text-indigo-900 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-indigo-600 hover:text-white transition-colors"
+                >
+                  <FaSignOutAlt /> Logout
+                </button>
+              </div>
             )}
-          </li>
+          </div>
         </ul>
       </div>
     </nav>
