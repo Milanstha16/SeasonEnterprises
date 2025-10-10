@@ -1,59 +1,47 @@
-import express from 'express';
-import { protect, adminOnly } from '../middleware/authMiddleware.js';
-import User from '../models/User.js';
-import Product from '../models/Product.js';
+import express from "express";
+import User from "../models/User.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// All admin routes are protected + admin only
-router.use(protect, adminOnly);
-
-// Quick stats for AdminDashboard
-router.get('/stats', async (req, res) => {
+// Admin Login Route
+router.post("/login", async (req, res) => {
   try {
-    const [totalUsers, totalProducts] = await Promise.all([
-      User.countDocuments(),
-      Product.countDocuments(),
-    ]);
-    res.json({ totalUsers, totalProducts });
-  } catch (err) {
-    res.status(500).json({ msg: 'Failed to fetch stats' });
-  }
-});
+    const { email, password } = req.body;
 
-// List all products (admin view)
-router.get('/products', async (req, res) => {
-  try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    res.json(products);
-  } catch (err) {
-    res.status(500).json({ msg: 'Failed to fetch products' });
-  }
-});
-
-// ✅ Add new product (admin only)
-router.post('/add-product', async (req, res) => {
-  try {
-    const { name, description, price, category, stock, image } = req.body;
-
-    if (!name || !price) {
-      return res.status(400).json({ msg: 'Name and price are required' });
+    if (!email || !password) {
+      return res.status(400).json({ msg: "Please provide email and password" });
     }
 
-    const product = new Product({
-      name,
-      description,
-      price,
-      category,
-      stock,
-      image,
-    });
+    const user = await User.findOne({ email });
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ msg: "Access denied: Admins only" });
+    }
 
-    await product.save();
-    res.status(201).json({ msg: 'Product added successfully', product });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ msg: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Failed to add product' });
+    console.error("Admin login error:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 

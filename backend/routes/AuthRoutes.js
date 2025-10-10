@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// Signup Route
+// Register Route
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -19,11 +19,9 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ msg: "Email already registered" });
     }
 
-    // Create user - password hashing handled in model pre-save hook
     const newUser = new User({ name, email, password });
     await newUser.save();
 
-    // Sign JWT token
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
       process.env.JWT_SECRET,
@@ -45,11 +43,10 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Login Route
+// User Login Route (no admins allowed here)
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log("Login attempt:", { email, password });
 
     if (!email || !password) {
       return res.status(400).json({ msg: "Please provide email and password" });
@@ -57,15 +54,14 @@ router.post("/login", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      console.log("User not found with email:", email);
       return res.status(401).json({ msg: "Invalid credentials" });
     }
 
-    console.log("User found:", user.email);
+    if (user.role === "admin") {
+      return res.status(403).json({ msg: "Admins cannot log in from this page." });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match result:", isMatch);
-
     if (!isMatch) {
       return res.status(401).json({ msg: "Invalid credentials" });
     }

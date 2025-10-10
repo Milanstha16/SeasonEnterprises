@@ -52,12 +52,6 @@ const ProductDetails = () => {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex gap-4 mb-6">
         <Button onClick={() => navigate(-1)}>Back</Button>
-        <Button
-          variant="secondary"
-          onClick={() => navigate(`/admin/products/edit/${id}`)}
-        >
-          Edit
-        </Button>
       </div>
 
       <h1 className="text-3xl font-semibold mb-4 text-black">{product.name}</h1>

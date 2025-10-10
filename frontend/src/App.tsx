@@ -14,7 +14,6 @@ import Footer from "@/components/layout/Footer";
 
 import Index from "./components/pages/Index";
 import NotFound from "./components/pages/NotFound";
-import ProductDetail from "./components/pages/ProductDetail";
 import CartPage from "./components/pages/Cart";
 import CheckoutPage from "./components/pages/Checkout";
 import ContactPage from "./components/pages/Contact";
@@ -96,7 +95,6 @@ const router = createBrowserRouter(
           element: <PublicLayout />,
           children: [
             { index: true, element: <Index /> },
-            { path: "product/:id", element: <ProductDetail /> },
             { path: "cart", element: <CartPage /> },
             { path: "checkout", element: <CheckoutPage /> },
             { path: "contact", element: <ContactPage /> },

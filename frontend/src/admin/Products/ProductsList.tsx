@@ -34,7 +34,7 @@ const ProductsList = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-black">Products</h1>
         <Link to="/admin/products/new">
-          <Button className="bg-indigo-700 hover:bg-indigo-800 text-white">Add Product</Button>
+          <Button className="bg-indigo-700 hover:bg-indigo-800 text-white">Add/Manage</Button>
         </Link>
       </div>
 

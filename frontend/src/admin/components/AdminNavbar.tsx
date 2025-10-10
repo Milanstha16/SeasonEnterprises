@@ -18,11 +18,9 @@ const AdminNavbar = () => {
   const navigate = useNavigate();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
-  const toggleProfileMenu = () => setProfileOpen((prev) => !prev);
 
   const handleLogout = () => {
     logout();
@@ -32,7 +30,7 @@ const AdminNavbar = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setProfileOpen(false);
+        // Nothing to toggle here anymore since the dropdown was removed
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -76,9 +74,13 @@ const AdminNavbar = () => {
           }`}
         >
           {navLinks.map(({ to, label, icon }) => (
-            <li key={to} className="md:py-0 py-2 border-b border-white/10 md:border-none px-4 md:px-0">
+            <li
+              key={to}
+              className="md:py-0 py-2 border-b border-white/10 md:border-none px-4 md:px-0"
+            >
               <NavLink
                 to={to}
+                end={to === "/admin"}
                 className={({ isActive }) =>
                   `flex items-center gap-2 hover:text-indigo-300 transition-colors ${
                     isActive ? activeClass : ""
@@ -91,30 +93,19 @@ const AdminNavbar = () => {
             </li>
           ))}
 
-          {/* Profile */}
-          <div ref={profileRef} className="relative px-4 md:px-0 py-2 md:py-0">
+          {/* User Info + Logout */}
+          <div className="flex items-center gap-2 px-4 md:px-0 py-2 md:py-0">
+            <FaUserCircle className="text-2xl" />
+            <span className="hidden md:inline font-medium max-w-[120px] truncate">
+              {user?.name || "Admin"}
+            </span>
             <button
-              onClick={toggleProfileMenu}
-              className="flex items-center gap-2"
-              aria-haspopup="true"
-              aria-expanded={profileOpen}
+              onClick={handleLogout}
+              title="Logout"
+              className="text-white hover:text-red-300 transition"
             >
-              <FaUserCircle className="text-2xl" />
-              <span className="hidden md:inline font-medium max-w-[120px] truncate">
-                {user?.name || "Admin"}
-              </span>
+              <FaSignOutAlt className="text-lg" />
             </button>
-
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white text-indigo-900 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-indigo-600 hover:text-white transition-colors"
-                >
-                  <FaSignOutAlt /> Logout
-                </button>
-              </div>
-            )}
           </div>
         </ul>
       </div>

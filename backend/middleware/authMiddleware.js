@@ -1,27 +1,35 @@
+// backend/middleware/authMiddleware.js
 import jwt from "jsonwebtoken";
 
-// Middleware to check token & set req.user
+// ✅ Middleware: Verify JWT & attach user info to req.user
 export const protect = (req, res, next) => {
   try {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return res.status(401).json({ msg: "No token, authorization denied" });
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ msg: "No token provided, authorization denied" });
     }
 
+    const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+
+    req.user = decoded; // { id, role }
     next();
   } catch (err) {
-    console.error("Auth middleware error:", err);
-    return res.status(401).json({ msg: "Token is not valid" });
+    console.error("🔒 Auth error:", err.message);
+    res.status(401).json({ msg: "Invalid or expired token" });
   }
 };
 
-// Middleware to allow only admin users
+// ✅ Middleware: Admin-only access
 export const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
-    next();
-  } else {
-    res.status(403).json({ msg: "Admin access required" });
+  if (!req.user) {
+    return res.status(401).json({ msg: "Unauthorized: No user info found" });
   }
+
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ msg: "Forbidden: Admin access required" });
+  }
+
+  next();
 };

@@ -8,8 +8,9 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [fadeIn, setFadeIn] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth(); // Use AuthContext
+  const { login } = useAuth();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -19,10 +20,10 @@ export default function AdminLogin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      // Call backend login route
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch("http://localhost:5000/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -31,26 +32,23 @@ export default function AdminLogin() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.msg || "Login failed");
-        return;
+        throw new Error(data.msg || "Login failed");
       }
 
       const { token, user } = data;
 
-      // Check admin role
       if (user.role !== "admin") {
         setError("Access denied: Admins only");
         return;
       }
 
-      // Save token and user in AuthContext
       login(token, user);
-
-      // Redirect to admin dashboard
       navigate("/admin");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login error:", err);
-      setError("An error occurred during login");
+      setError(err.message || "An error occurred during login");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,9 +95,14 @@ export default function AdminLogin() {
 
         <button
           type="submit"
-          className="w-full py-3 text-lg font-semibold text-white transition-transform bg-indigo-700 rounded-lg hover:bg-indigo-800 hover:scale-105"
+          disabled={loading}
+          className={`w-full py-3 text-lg font-semibold text-white rounded-lg transition-transform ${
+            loading
+              ? "bg-indigo-300 cursor-not-allowed"
+              : "bg-indigo-700 hover:bg-indigo-800 hover:scale-105"
+          }`}
         >
-          Log In
+          {loading ? "Logging in..." : "Log In"}
         </button>
       </form>
     </section>

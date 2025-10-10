@@ -24,7 +24,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function Shop() {
   const navigate = useNavigate();
-  const { add } = useCart();
+  const { add, clear } = useCart(); // ✅ Access cart methods
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,7 +50,7 @@ export default function Shop() {
       id: product._id,
       name: product.name,
       price: product.price,
-      image: `${BASE_URL}/uploads/${product.image}`, // ✅ Fixed image path
+      image: `${BASE_URL}/uploads/${product.image}`,
     });
 
     toast({
@@ -59,11 +59,21 @@ export default function Shop() {
     });
   };
 
+  // ✅ Buy Now Logic: clear cart, add product, go to checkout
   const handleBuyNow = (product: Product) => {
+    clear(); // Clear the cart before adding single item
+    add({
+      id: product._id,
+      name: product.name,
+      price: product.price,
+      image: `${BASE_URL}/uploads/${product.image}`,
+    });
+
     toast({
-      title: "Proceeding to checkout..",
+      title: "Proceeding to checkout...",
       description: `${product.name}`,
     });
+
     navigate("/checkout");
   };
 
@@ -143,7 +153,11 @@ export default function Shop() {
                     >
                       Add to Cart
                     </motion.button>
-                    <Button variant="default" className="w-full" onClick={() => handleBuyNow(product)}>
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={() => handleBuyNow(product)}
+                    >
                       Buy Now
                     </Button>
                   </div>

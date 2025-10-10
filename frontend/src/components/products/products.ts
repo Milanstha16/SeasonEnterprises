@@ -1,4 +1,4 @@
-import bowl from "../assets/hero-nepal-crafts.jpg"; // reusing as placeholder images
+import bowl from "../../assets/hero-nepal-crafts.jpg"; // reusing as placeholder images
 
 export type Product = {
   id: string;

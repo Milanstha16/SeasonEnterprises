@@ -1,5 +1,8 @@
 import { motion, useScroll, useTransform } from "framer-motion";
-import heroImage from "../assets/hero-nepal-crafts.jpg";
+import heroImage from "../../assets/hero-nepal-crafts.jpg";
+import jewellery from "../../assets/jewelry.jpg";
+import clothing from "../../assets/Clothing.jpeg";
+import homedecor from "../../assets/Homedecor.jpg";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -120,9 +123,9 @@ export default function Hero() {
       }}
     >
       {[
-        { title: "Jewelry", img: "/src/assets/Jewelery.jpeg" },
-        { title: "Clothing", img: "/src/assets/Clothing.jpeg" },
-        { title: "Home Decor", img: "/src/assets/Homedecor.jpg" },
+        { title: "Jewelry", img: "../../assets/jewelry.jpg" },
+        { title: "Clothing", img: "../../assets/Clothing.jpeg" },
+        { title: "Home Decor", img: "../../assets/Homedecor.jpg" },
       ].map((item, i) => (
         <motion.div
           key={i}
