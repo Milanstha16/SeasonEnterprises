@@ -42,6 +42,7 @@ const AdminNavbar = () => {
     { to: "/admin/products", label: "Products", icon: <FaBoxOpen /> },
     { to: "/admin/users", label: "Users", icon: <FaUsers /> },
     { to: "/admin/orders", label: "Orders", icon: <FaShoppingCart /> },
+    { to: "/admin/contact", label: "Contact", icon: <FaUserCircle /> },
   ];
 
   const activeClass =

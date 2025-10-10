@@ -11,6 +11,7 @@ import AuthRoutes from "./routes/AuthRoutes.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
 import OrderRoutes from "./routes/OrderRoutes.js";
+import ContactRoutes from "./routes/ContactRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -50,6 +51,7 @@ app.use("/api/auth", AuthRoutes);
 app.use("/api/admin", AdminRoutes);
 app.use('/api/users', UserRoutes);
 app.use('/api/orders', OrderRoutes);
+app.use("/api/contact", ContactRoutes);
 
 // ✅ Test route
 app.get("/", (req, res) => {

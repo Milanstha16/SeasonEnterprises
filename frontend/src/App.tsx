@@ -26,6 +26,7 @@ import AdminLogin from "./admin/auth/AdminLogin";
 import PrivateAdminRoute from "./admin/components/PrivateAdminRoute";
 import AdminNavbar from "./admin/components/AdminNavbar";
 import AdminDashboard from "./admin/components/AdminDashboard";
+import AdminContact from "./admin/components/AdminContact";
 
 import ProductsList from "./admin/Products/ProductsList";
 import ProductForm from "./admin/Products/ProductForm";
@@ -125,6 +126,7 @@ const router = createBrowserRouter(
             { path: "products/new", element: <ProductForm /> },
             { path: "products/:id", element: <ProductDetails /> },
             { path: "users", element: <UsersList /> },
+            { path: "contact", element: <AdminContact /> },
             { path: "users/:id", element: <UserDetails /> },
             { path: "orders", element: <OrdersList /> },
             { path: "orders/:id", element: <OrderDetails /> },

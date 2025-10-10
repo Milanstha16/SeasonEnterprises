@@ -1,7 +1,5 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/context/CartContext";
-import { toast } from "@/components/hooks/use-toast";
 
 export interface Product {
   id: string;
@@ -16,14 +14,9 @@ export interface Product {
 export default function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
 
-  const onAdd = () => {
-    add({ id: product.id, name: product.name, price: product.price, image: product.image });
-    toast({ title: "Added to cart", description: `${product.name} added to your cart.` });
-  };
-
   return (
     <article className="group rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow">
-      <Link to={`/shop/${product.id}`} className="block overflow-hidden">
+      <Link to="/Shop" className="block overflow-hidden">
         <img
           src={product.image}
           alt={`${product.name} handmade Nepalese craft product photo`}

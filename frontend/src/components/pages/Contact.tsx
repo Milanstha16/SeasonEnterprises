@@ -2,50 +2,82 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "@/components/hooks/use-toast";
-import { useLocation } from 'react-router-dom';
 
 export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const data = new FormData(form);
+
     const name = data.get("name");
+    const email = data.get("email");
+    const subject = data.get("subject");
+    const message = data.get("message");
+
     setSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      const response = await fetch("http://localhost:5000/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to send message");
+      }
+
+      form.reset();
+      toast({
+        title: "Message sent",
+        description: `Thanks ${name}, we will reply within 24 hours.`,
+      });
+    } catch (error) {
+      console.error("Contact form error:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again later.",
+      });
+    } finally {
       setSubmitting(false);
-      (e.currentTarget as HTMLFormElement).reset();
-      toast({ title: "Message sent", description: `Thanks ${name}, we will reply within 24 hours.` });
-    }, 800);
+    }
   };
 
   const orgLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'Season Enterprises',
-    url: '/',
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Season Enterprises",
+    url: "/",
     contactPoint: {
-      '@type': 'ContactPoint',
-      telephone: '1-410-372-0590',
-      contactType: 'customer service',
-      areaServed: 'Worldwide',
-      availableLanguage: ['English', 'Nepali']
+      "@type": "ContactPoint",
+      telephone: "1-410-372-0590",
+      contactType: "customer service",
+      areaServed: "Worldwide",
+      availableLanguage: ["English", "Nepali"],
     },
     address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Baltimore, MD 21285-5469',
-      addressLocality: 'Baltimore',
-      addressRegion: 'MD',
-      postalCode: '21285-5469',
-      addressCountry: 'USA'
-    }
+      "@type": "PostalAddress",
+      streetAddress: "Baltimore, MD 21285-5469",
+      addressLocality: "Baltimore",
+      addressRegion: "MD",
+      postalCode: "21285-5469",
+      addressCountry: "USA",
+    },
   };
 
   return (
     <main className="container py-12">
       <Helmet>
         <title>Contact Us | Season Enterprises</title>
-        <meta name="description" content="Get in touch with Season Enterprises for product questions, wholesale, or support." />
+        <meta
+          name="description"
+          content="Get in touch with Season Enterprises for product questions, wholesale, or support."
+        />
         <link rel="canonical" href="/contact" />
         <script type="application/ld+json">{JSON.stringify(orgLd)}</script>
       </Helmet>
@@ -60,24 +92,60 @@ export default function ContactPage() {
       <div className="grid gap-10 md:grid-cols-2">
         <section className="rounded-lg border p-6 bg-card">
           <h2 className="font-medium text-lg">Send us a message</h2>
-          <form onSubmit={onSubmit} className="mt-4 space-y-4" aria-label="Contact form">
+          <form
+            onSubmit={onSubmit}
+            className="mt-4 space-y-4"
+            aria-label="Contact form"
+          >
             <div>
-              <label className="block text-sm mb-1" htmlFor="name">Full name</label>
-              <input id="name" name="name" required className="w-full rounded-md border bg-background px-3 py-2" />
+              <label className="block text-sm mb-1" htmlFor="name">
+                Full name
+              </label>
+              <input
+                id="name"
+                name="name"
+                required
+                className="w-full rounded-md border bg-background px-3 py-2"
+              />
             </div>
             <div>
-              <label className="block text-sm mb-1" htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" required className="w-full rounded-md border bg-background px-3 py-2" />
+              <label className="block text-sm mb-1" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="w-full rounded-md border bg-background px-3 py-2"
+              />
             </div>
             <div>
-              <label className="block text-sm mb-1" htmlFor="subject">Subject</label>
-              <input id="subject" name="subject" required className="w-full rounded-md border bg-background px-3 py-2" />
+              <label className="block text-sm mb-1" htmlFor="subject">
+                Subject
+              </label>
+              <input
+                id="subject"
+                name="subject"
+                required
+                className="w-full rounded-md border bg-background px-3 py-2"
+              />
             </div>
             <div>
-              <label className="block text-sm mb-1" htmlFor="message">Message</label>
-              <textarea id="message" name="message" rows={5} required className="w-full rounded-md border bg-background px-3 py-2" />
+              <label className="block text-sm mb-1" htmlFor="message">
+                Message
+              </label>
+              <textarea
+                id="message"
+                name="message"
+                rows={5}
+                required
+                className="w-full rounded-md border bg-background px-3 py-2"
+              />
             </div>
-            <Button type="submit" disabled={submitting}>{submitting ? 'Sending…' : 'Send message'}</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Sending…" : "Send message"}
+            </Button>
           </form>
         </section>
 
@@ -87,9 +155,20 @@ export default function ContactPage() {
             <p className="mt-2 text-muted-foreground">
               Baltimore, MD 21285-5469, USA
             </p>
-            <p className="mt-2"><span className="text-muted-foreground">Phone:</span> 1-410-372-0590</p>
-            <p className=""><span className="text-muted-foreground">Email:</span> season@seasonenterprises.com</p>
-            <a href="https://maps.google.com/?q=Baltimore,MD" target="_blank" rel="noreferrer" className="inline-block mt-3 underline underline-offset-4">
+            <p className="mt-2">
+              <span className="text-muted-foreground">Phone:</span>{" "}
+              1-410-372-0590
+            </p>
+            <p className="">
+              <span className="text-muted-foreground">Email:</span>{" "}
+              season@seasonenterprises.com
+            </p>
+            <a
+              href="https://maps.google.com/?q=Baltimore,MD"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block mt-3 underline underline-offset-4"
+            >
               View on Google Maps
             </a>
           </div>
@@ -101,7 +180,6 @@ export default function ContactPage() {
             </p>
             <p className="mt-2">Email: season@seasonenterprises.com</p>
           </div>
-
         </aside>
       </div>
     </main>
