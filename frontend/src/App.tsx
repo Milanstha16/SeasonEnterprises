@@ -16,6 +16,7 @@ import Index from "./components/pages/Index";
 import NotFound from "./components/pages/NotFound";
 import CartPage from "./components/pages/Cart";
 import CheckoutPage from "./components/pages/Checkout";
+import CheckoutSuccess from "./components/pages/CheckoutSuccess";
 import ContactPage from "./components/pages/Contact";
 import AccountPage from "./components/pages/Account";
 import Signin from "./components/pages/Signin";
@@ -98,6 +99,7 @@ const router = createBrowserRouter(
             { index: true, element: <Index /> },
             { path: "cart", element: <CartPage /> },
             { path: "checkout", element: <CheckoutPage /> },
+            { path: "checkoutsuccess", element: <CheckoutSuccess /> },
             { path: "contact", element: <ContactPage /> },
             { path: "account", element: <AccountPage /> },
             { path: "signin", element: <Signin /> },

@@ -34,15 +34,37 @@ const OrderDetails = () => {
   if (error) return <p className="text-red-600 p-6">{error}</p>;
   if (!order) return <p className="p-6">Loading...</p>;
 
+  // Format the total as currency
+  const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+
   return (
     <div className="p-6">
       <Button onClick={() => navigate(-1)}>Back</Button>
       <h1 className="text-2xl font-semibold mt-4 mb-4">Order #{order._id}</h1>
-      <p><strong>Status:</strong> {order.status}</p>
-      <p><strong>Total:</strong> {order.total}</p>
-      {/* Show items, user info, etc. */}
+      <p><strong>Status:</strong> {order.paymentStatus}</p> {/* Corrected to paymentStatus */}
+      <p><strong>Total:</strong> {formatCurrency(order.totalAmount)}</p> {/* Format total */}
+      
+      <h2 className="text-xl mt-4 mb-2">Items:</h2>
+      <ul className="space-y-2">
+        {order.items.map((item: any) => (
+          <li key={item.productId} className="border-b py-2">
+            <p><strong>{item.name}</strong></p>
+            <p>Quantity: {item.quantity}</p>
+            <p>Price: {formatCurrency(item.priceAtPurchase)}</p>
+            <p>Total: {formatCurrency(item.priceAtPurchase * item.quantity)}</p>
+          </li>
+        ))}
+      </ul>
+
+      <h2 className="text-xl mt-4 mb-2">Shipping Info:</h2>
+      <p><strong>Full Name:</strong> {order.shipping.fullName}</p>
+      <p><strong>Email:</strong> {order.shipping.email}</p>
+      <p><strong>Address:</strong> {order.shipping.address}</p>
+      <p><strong>City:</strong> {order.shipping.city}</p>
+      <p><strong>Postal Code:</strong> {order.shipping.postalCode}</p>
+
       <Link to={`/admin/orders/${order._id}/update`}>
-        <Button>Update Status</Button>
+        <Button className="mt-4">Update Status</Button>
       </Link>
     </div>
   );

@@ -1,3 +1,5 @@
+// src/components/context/AuthContext.tsx
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Updated User type including role
@@ -52,6 +54,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// Custom hook to access the `user` directly
+export const useUser = (): User | null => {
+  const { user } = useAuth();
+  return user;
+};
+
+// Custom hook to access the `AuthContext` (provides both `user` and `token`)
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within AuthProvider");

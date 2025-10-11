@@ -1,10 +1,17 @@
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/components/hooks/use-toast";
+import { useCart } from "@/components/context/CartContext";
+import { useAuth } from "@/components/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function CheckoutPage() {
-  const [paymentMethod, setPaymentMethod] = useState("paypal");
+  const { items, clear, total } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal">("stripe");
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -14,61 +21,65 @@ export default function CheckoutPage() {
     postalCode: "",
   });
 
+  // Redirect if user not logged in
+  useEffect(() => {
+    if (!user) {
+      toast({ title: "Login required", description: "You must log in to checkout." });
+      navigate("/signin");
+    }
+  }, [user, navigate]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const { fullName, email, address, city, postalCode } = formData;
+
+    if (!user) return;
+
+    if (items.length === 0) {
+      toast({ title: "Cart empty", description: "Add items to cart before checkout." });
+      return;
+    }
 
     setSubmitting(true);
 
     try {
-      // Send order details to the backend
-      const response = await fetch("http://localhost:5000/api/checkout", {
+      const response = await fetch("http://localhost:5000/api/orders/create", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName,
-          email,
-          address,
-          city,
-          postalCode,
+          userId: user.id, // Ensure this matches the correct field from your user context (typically `_id`)
+          items: items.map((i) => ({
+            productId: i.id, // Ensure this field matches your product data structure
+            quantity: i.quantity,
+            priceAtPurchase: i.price, // Include the price at the time of purchase
+          })),
+          shipping: formData,
           paymentMethod,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to process payment");
+        throw new Error(`Failed to create order. Status: ${response.status}`);
       }
 
-      // Reset the form and show success message
-      setFormData({
-        fullName: "",
-        email: "",
-        address: "",
-        city: "",
-        postalCode: "",
-      });
+      const data = await response.json();
 
-      toast({
-        title: "Order Placed",
-        description: `Thanks for your purchase, ${fullName}. We'll process your order shortly.`,
-      });
-    } catch (error) {
-      console.error("Checkout error:", error);
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again later.",
-      });
+      // Handle Stripe Checkout
+      if (paymentMethod === "stripe" && data.url) {
+        window.location.href = data.url; // Redirect to Stripe payment page
+      } else if (paymentMethod === "paypal") {
+        toast({ title: "PayPal", description: "Redirect to PayPal flow (not implemented)." });
+      }
+
+      // Clear cart after order creation
+      clear();
+
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Something went wrong." });
     } finally {
       setSubmitting(false);
     }
@@ -85,7 +96,7 @@ export default function CheckoutPage() {
       <h1 className="font-display text-3xl mb-6">Checkout</h1>
 
       <form onSubmit={onSubmit} className="grid gap-6 md:grid-cols-2">
-        {/* Billing Information */}
+        {/* Billing / Shipping Info */}
         <div className="space-y-4">
           <input
             name="fullName"
@@ -137,27 +148,26 @@ export default function CheckoutPage() {
             <label className="block text-sm font-medium mb-1">Payment Method</label>
             <select
               value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
+              onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "paypal")}
               className="w-full border rounded px-3 py-2"
             >
+              <option value="stripe">Visa / Credit Card (Stripe)</option>
               <option value="paypal">PayPal</option>
-              <option value="visa">Visa / Debit or Credit Card</option>
             </select>
           </div>
         </div>
 
         {/* Order Summary & Submit */}
         <aside className="rounded-lg border p-4 h-fit">
-          <h2 className="font-medium mb-2">Payment Summary</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            You selected: <strong>{paymentMethod.toUpperCase()}</strong>
-          </p>
-
+          <h2 className="font-medium mb-2">Order Summary</h2>
           <ul className="text-sm mb-4">
-            <li>Subtotal: $100.00</li>
-            <li>Shipping: $10.00</li>
-            <li className="font-semibold">Total: $110.00</li>
+            {items.map((i) => (
+              <li key={i.id}>
+                {i.name} x {i.quantity} = ${(i.price * i.quantity).toFixed(2)}
+              </li>
+            ))}
           </ul>
+          <p className="font-semibold mb-4">Total: ${total.toFixed(2)}</p>
 
           <Button className="mt-2 w-full" type="submit" disabled={submitting}>
             {submitting ? "Processing..." : "Pay Now"}
