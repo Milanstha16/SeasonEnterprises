@@ -1,26 +1,77 @@
-import React, { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { toast } from "@/components/hooks/use-toast";
 
 export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("paypal");
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    address: "",
+    city: "",
+    postalCode: "",
+  });
 
-  const onSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const { fullName, email, address, city, postalCode } = formData;
 
-    // Placeholder logic
-    switch (paymentMethod) {
-      case "paypal":
-        alert("Redirecting to PayPal... (integration coming soon)");
-        break;
-      case "visa":
-        alert("Redirecting to Stripe (Visa)... (integration coming soon)");
-        break;
-      default:
-        alert("Please select a payment method.");
+    setSubmitting(true);
+
+    try {
+      // Send order details to the backend
+      const response = await fetch("http://localhost:5000/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName,
+          email,
+          address,
+          city,
+          postalCode,
+          paymentMethod,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to process payment");
+      }
+
+      // Reset the form and show success message
+      setFormData({
+        fullName: "",
+        email: "",
+        address: "",
+        city: "",
+        postalCode: "",
+      });
+
+      toast({
+        title: "Order Placed",
+        description: `Thanks for your purchase, ${fullName}. We'll process your order shortly.`,
+      });
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again later.",
+      });
+    } finally {
+      setSubmitting(false);
     }
-
-    // After integration, call backend/payment gateway here
   };
 
   return (
@@ -36,13 +87,49 @@ export default function CheckoutPage() {
       <form onSubmit={onSubmit} className="grid gap-6 md:grid-cols-2">
         {/* Billing Information */}
         <div className="space-y-4">
-          <input required placeholder="Full Name" className="w-full border rounded px-3 py-2" />
-          <input required type="email" placeholder="Email" className="w-full border rounded px-3 py-2" />
-          <input required placeholder="Address" className="w-full border rounded px-3 py-2" />
+          <input
+            name="fullName"
+            value={formData.fullName}
+            onChange={handleChange}
+            required
+            placeholder="Full Name"
+            className="w-full border rounded px-3 py-2"
+          />
+          <input
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            placeholder="Email"
+            className="w-full border rounded px-3 py-2"
+          />
+          <input
+            name="address"
+            value={formData.address}
+            onChange={handleChange}
+            required
+            placeholder="Address"
+            className="w-full border rounded px-3 py-2"
+          />
 
           <div className="grid grid-cols-2 gap-3">
-            <input required placeholder="City" className="w-full border rounded px-3 py-2" />
-            <input required placeholder="Postal Code" className="w-full border rounded px-3 py-2" />
+            <input
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              required
+              placeholder="City"
+              className="w-full border rounded px-3 py-2"
+            />
+            <input
+              name="postalCode"
+              value={formData.postalCode}
+              onChange={handleChange}
+              required
+              placeholder="Postal Code"
+              className="w-full border rounded px-3 py-2"
+            />
           </div>
 
           {/* Payment Method Selector */}
@@ -72,8 +159,8 @@ export default function CheckoutPage() {
             <li className="font-semibold">Total: $110.00</li>
           </ul>
 
-          <Button className="mt-2 w-full" type="submit">
-            Pay Now
+          <Button className="mt-2 w-full" type="submit" disabled={submitting}>
+            {submitting ? "Processing..." : "Pay Now"}
           </Button>
         </aside>
       </form>

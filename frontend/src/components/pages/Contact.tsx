@@ -5,16 +5,24 @@ import { toast } from "@/components/hooks/use-toast";
 
 export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const data = new FormData(form);
-
-    const name = data.get("name");
-    const email = data.get("email");
-    const subject = data.get("subject");
-    const message = data.get("message");
+    const { name, email, subject, message } = formData;
 
     setSubmitting(true);
 
@@ -32,7 +40,13 @@ export default function ContactPage() {
         throw new Error(error.message || "Failed to send message");
       }
 
-      form.reset();
+      // Reset form and show success message
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
       toast({
         title: "Message sent",
         description: `Thanks ${name}, we will reply within 24 hours.`,
@@ -105,6 +119,8 @@ export default function ContactPage() {
                 id="name"
                 name="name"
                 required
+                value={formData.name}
+                onChange={handleChange}
                 className="w-full rounded-md border bg-background px-3 py-2"
               />
             </div>
@@ -117,6 +133,8 @@ export default function ContactPage() {
                 name="email"
                 type="email"
                 required
+                value={formData.email}
+                onChange={handleChange}
                 className="w-full rounded-md border bg-background px-3 py-2"
               />
             </div>
@@ -128,6 +146,8 @@ export default function ContactPage() {
                 id="subject"
                 name="subject"
                 required
+                value={formData.subject}
+                onChange={handleChange}
                 className="w-full rounded-md border bg-background px-3 py-2"
               />
             </div>
@@ -140,6 +160,8 @@ export default function ContactPage() {
                 name="message"
                 rows={5}
                 required
+                value={formData.message}
+                onChange={handleChange}
                 className="w-full rounded-md border bg-background px-3 py-2"
               />
             </div>
