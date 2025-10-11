@@ -16,9 +16,6 @@ export default function CheckoutPage() {
       case "visa":
         alert("Redirecting to Stripe (Visa)... (integration coming soon)");
         break;
-      case "esewa":
-        alert("Redirecting to eSewa... (integration coming soon)");
-        break;
       default:
         alert("Please select a payment method.");
     }
