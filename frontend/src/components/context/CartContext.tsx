@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
 
+// Types
 export type CartItem = {
   id: string;
   name: string;
@@ -24,7 +25,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 // Ensure the environment variable exists, or fall back to a default
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://seasonenterprises.onrender.com";
 
-console.log("API_BASE_URL:", API_BASE_URL); // Log for debugging, check the console
+console.log("API_BASE_URL:", API_BASE_URL);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -45,9 +46,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`${API_BASE_URL}/api/cart`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         if (!res.ok) throw new Error("Failed to fetch cart");
 
         const data = await res.json();
+
         const mappedItems: CartItem[] = data.items
           .filter((item: any) => item.productId)
           .map((item: any) => ({
@@ -58,7 +61,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               ? item.productId.image.startsWith("http")
                 ? item.productId.image
                 : `${API_BASE_URL}/${item.productId.image}`
-              : "/default-image.jpg", // Fallback image
+              : "/default-image.jpg",
             quantity: item.quantity,
           }));
 
@@ -75,21 +78,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     fetchCart();
   }, [token]);
 
+  // ✅ FIXED: Corrected syncCartWithBackend to match backend expectations
   const syncCartWithBackend = async (updatedItems: CartItem[]) => {
     if (!token) return;
 
     try {
       setLoading(true);
+
+      const payload = {
+        items: updatedItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          priceAtPurchase: item.price,
+        })),
+      };
+
+      console.log("Syncing cart payload:", payload);
+
       const response = await fetch(`${API_BASE_URL}/api/cart`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(updatedItems),
+        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Failed syncing cart with backend");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed syncing cart with backend");
+      }
 
       console.log("Cart synced successfully with backend");
     } catch (err) {
@@ -137,7 +155,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     fetch(`${API_BASE_URL}/api/cart/clear`, {
-      method: "DELETE", // Use DELETE for clearing the cart
+      method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {

@@ -5,13 +5,14 @@ import { toast } from "@/components/hooks/use-toast";
 import { useCart } from "@/components/context/CartContext";
 import { useAuth } from "@/components/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// Initialize Stripe with your public key
-const stripePromise = loadStripe('pk_test_51SH7TZCnCfQ1XzuSdNaOj13gAjPfFpGS577x52P92cIIsPdUBfhQ1wWWxFQNOz9iYP7jHxAp6J26tXCAFVP03GTl00y4IT7nJ6'); // Use your actual Stripe public key
+// Load Stripe public key from env variable
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
-export default function CheckoutPage() {
+function CheckoutForm() {
   const { items, clear, total } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function CheckoutPage() {
   });
 
   const stripe = useStripe();
-  const elements = useElements(); // Access elements from the hook
+  const elements = useElements();
 
   // Redirect if user not logged in
   useEffect(() => {
@@ -61,7 +62,6 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      // Collect order data and prepare it for the backend
       const orderData = {
         userId: user.id,
         items: items.map((i) => ({
@@ -73,14 +73,11 @@ export default function CheckoutPage() {
         paymentMethod,
       };
 
-      // Validate order data
       validateOrderData(orderData);
 
-      // Log the order data for debugging
       console.log("Order data:", orderData);
 
-      // Send request to backend to create the order
-      const response = await fetch("http://localhost:5000/api/orders/create", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/orders/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
@@ -94,25 +91,22 @@ export default function CheckoutPage() {
 
       const data = await response.json();
 
-      // Handle Stripe Checkout
       if (paymentMethod === "stripe" && data.clientSecret) {
         if (!stripe || !elements) {
           toast({ title: "Stripe not loaded", description: "Stripe.js is not ready yet." });
           return;
         }
 
-        // Confirm payment using the clientSecret
         const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
           payment_method: {
-            card: elements.getElement(CardElement),
+            card: elements.getElement(CardElement)!,
           },
         });
 
         if (error) {
           toast({ title: "Payment Failed", description: error.message });
-        } else if (paymentIntent?.status === 'succeeded') {
+        } else if (paymentIntent?.status === "succeeded") {
           toast({ title: "Payment Successful", description: "Your order has been placed!" });
-          // Clear the cart after the order is created
           clear();
           navigate("/order-confirmation");
         }
@@ -120,7 +114,6 @@ export default function CheckoutPage() {
         toast({ title: "PayPal", description: "Redirect to PayPal flow (not implemented)." });
       }
     } catch (err: any) {
-      // Specific error handling
       if (err.message.includes("Failed to create order")) {
         toast({ title: "Backend Error", description: "Could not create order. Please try again later." });
       } else if (err.message.includes("Stripe not loaded")) {
@@ -230,5 +223,13 @@ export default function CheckoutPage() {
         </aside>
       </form>
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Elements stripe={stripePromise}>
+      <CheckoutForm />
+    </Elements>
   );
 }
