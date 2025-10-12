@@ -21,7 +21,10 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
+// Ensure the environment variable exists, or fall back to a default
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://seasonenterprises.onrender.com";
+
+console.log("API_BASE_URL:", API_BASE_URL); // Log for debugging, check the console
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -88,6 +91,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (!response.ok) throw new Error("Failed syncing cart with backend");
 
+      console.log("Cart synced successfully with backend");
     } catch (err) {
       console.error("Failed syncing cart with backend", err);
       setError("Failed to sync cart. Please try again.");
@@ -131,13 +135,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clear = () => {
     setItems([]);
     if (!token) return;
+
     fetch(`${API_BASE_URL}/api/cart/clear`, {
-      method: "POST",
+      method: "DELETE", // Use DELETE for clearing the cart
       headers: { Authorization: `Bearer ${token}` },
-    }).catch((err) => {
-      console.error(err);
-      setError("Failed to clear cart. Please try again.");
-    });
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to clear cart");
+        console.log("Cart cleared successfully from backend");
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to clear cart. Please try again.");
+      });
   };
 
   const count = items.reduce((a, b) => a + b.quantity, 0);

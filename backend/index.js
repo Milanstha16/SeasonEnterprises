@@ -76,14 +76,31 @@ mongoose
       console.log(`Server running on http://localhost:${PORT}`)
     );
   })
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);  // Exit on error
+  });
 
-// Stripe and PayPal integration setup
+// Check if Stripe secret key exists
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error("STRIPE_SECRET_KEY is not defined in environment variables");
+  process.exit(1);
+}
+
+// Stripe client initialization
 const stripeClient = stripe(process.env.STRIPE_SECRET_KEY); // Stripe secret key
+
+// Check if PayPal credentials are set
+if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) {
+  console.error("PayPal credentials not defined in environment variables");
+  process.exit(1);
+}
+
+// PayPal configuration
 paypal.configure({
   mode: "sandbox", // Change to 'live' for production
   client_id: process.env.PAYPAL_CLIENT_ID, // PayPal Client ID
-  client_secret: process.env.PAYPAL_CLIENT_SECRET, // PayPal Client Secret
+  client_secret: process.env.PAYPAL_SECRET, // PayPal Client Secret
 });
 
 // Stripe payment creation endpoint (example)
@@ -108,11 +125,11 @@ app.post("/api/payment/stripe", async (req, res) => {
       success_url: `${process.env.FRONTEND_URL}/success`,
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
     });
-    
+
     res.json({ url: session.url });
   } catch (error) {
     console.error("Error with Stripe payment:", error);
-    res.status(500).json({ error: "Stripe payment creation failed" });
+    res.status(500).json({ error: error.message || "Stripe payment creation failed" });
   }
 });
 
@@ -153,7 +170,8 @@ app.post("/api/payment/paypal", (req, res) => {
       console.error("Error with PayPal payment:", error);
       res.status(500).json({ error: "PayPal payment creation failed" });
     } else {
-      res.json({ approvalUrl: payment.links.find(link => link.rel === "approval_url")?.href });
+      const approvalUrl = payment.links.find(link => link.rel === "approval_url")?.href;
+      res.json({ approvalUrl });
     }
   });
 });
