@@ -21,12 +21,13 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-// Replace with your actual backend URL or environment variable
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch cart from backend on login
   useEffect(() => {
@@ -36,29 +37,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     const fetchCart = async () => {
+      setLoading(true);
       try {
-        const res = await fetch("/api/cart", {
+        const res = await fetch(`${API_BASE_URL}/api/cart`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch cart");
-        const data = await res.json();
 
+        const data = await res.json();
         const mappedItems: CartItem[] = data.items
-          .filter((item: any) => item.productId) // Filter out null productIds
+          .filter((item: any) => item.productId)
           .map((item: any) => ({
             id: item.productId._id,
             name: item.productId.name,
             price: item.productId.price,
-            image: item.productId.image.startsWith("http")
-              ? item.productId.image
-              : `${API_BASE_URL}/${item.productId.image}`, // Make path absolute
+            image: item.productId.image
+              ? item.productId.image.startsWith("http")
+                ? item.productId.image
+                : `${API_BASE_URL}/${item.productId.image}`
+              : "/default-image.jpg", // Fallback image
             quantity: item.quantity,
           }));
 
         setItems(mappedItems);
       } catch (error) {
         console.error("Error fetching cart:", error);
+        setError("Failed to fetch your cart. Please try again later.");
         setItems([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -69,18 +76,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     try {
-      for (const item of updatedItems) {
-        await fetch("/api/cart", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ productId: item.id, quantity: item.quantity }),
-        });
-      }
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/cart`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedItems),
+      });
+
+      if (!response.ok) throw new Error("Failed syncing cart with backend");
+
     } catch (err) {
       console.error("Failed syncing cart with backend", err);
+      setError("Failed to sync cart. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,10 +131,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clear = () => {
     setItems([]);
     if (!token) return;
-    fetch("/api/cart/clear", {
+    fetch(`${API_BASE_URL}/api/cart/clear`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
-    }).catch((err) => console.error(err));
+    }).catch((err) => {
+      console.error(err);
+      setError("Failed to clear cart. Please try again.");
+    });
   };
 
   const count = items.reduce((a, b) => a + b.quantity, 0);
@@ -133,7 +148,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items, count, total]
   );
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={value}>
+      {error && <div className="error">{error}</div>}
+      {loading && <div className="loading-spinner">Loading...</div>}
+      {children}
+    </CartContext.Provider>
+  );
 }
 
 export function useCart() {
