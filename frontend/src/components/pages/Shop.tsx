@@ -61,7 +61,7 @@ export default function Shop() {
 
   // ✅ Buy Now Logic: clear cart, add product, go to checkout
   const handleBuyNow = (product: Product) => {
-    clear(); // Clear the cart before adding single item
+    clear(); // Clear the cart before adding a single item
     add({
       id: product._id,
       name: product.name,
@@ -145,22 +145,29 @@ export default function Shop() {
                   <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
                   <p className="text-lg font-medium mb-4">${product.price.toFixed(2)}</p>
 
-                  <div className="mt-auto flex gap-2">
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      className="w-full bg-muted hover:bg-muted/80 text-sm font-medium text-primary border border-border rounded-md px-4 py-2 transition-colors"
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      Add to Cart
-                    </motion.button>
-                    <Button
-                      variant="default"
-                      className="w-full"
-                      onClick={() => handleBuyNow(product)}
-                    >
-                      Buy Now
-                    </Button>
-                  </div>
+                  {/* Show out of stock label if stock is 0 */}
+                  {product.stock && product.stock <= 0 ? (
+                    <p className="text-red-600 font-semibold mt-2">Out of Stock</p>
+                  ) : (
+                    <div className="mt-auto flex gap-2">
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        className="w-full bg-muted hover:bg-muted/80 text-sm font-medium text-primary border border-border rounded-md px-4 py-2 transition-colors"
+                        onClick={() => handleAddToCart(product)}
+                        disabled={!product.stock || product.stock <= 0}
+                      >
+                        Add to Cart
+                      </motion.button>
+                      <Button
+                        variant="default"
+                        className="w-full"
+                        onClick={() => handleBuyNow(product)}
+                        disabled={!product.stock || product.stock <= 0}
+                      >
+                        Buy Now
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))

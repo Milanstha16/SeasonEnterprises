@@ -9,30 +9,36 @@ const OrderStatusUpdate = () => {
   const navigate = useNavigate();
 
   const [status, setStatus] = useState<string>("");
+  const [initialStatus, setInitialStatus] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const [initialStatus, setInitialStatus] = useState<string>("");
+  const [fetching, setFetching] = useState<boolean>(false); // New state for fetch loading
 
   const fetchOrder = async () => {
+    setFetching(true); // Set fetching to true while loading
     try {
       const res = await fetch(`http://localhost:5000/api/orders/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) throw new Error("Fetch failed");
+
+      if (!res.ok) throw new Error("Failed to fetch order");
+
       const data = await res.json();
-      setStatus(data.paymentStatus); // Assuming the backend returns 'paymentStatus'
-      setInitialStatus(data.paymentStatus); // Save initial status for comparison
+      setStatus(data.status || "pending");
+      setInitialStatus(data.status || "pending");
     } catch (err) {
       console.error(err);
       setError("Could not fetch order.");
+    } finally {
+      setFetching(false); // Set fetching to false when done
     }
   };
 
   useEffect(() => {
     if (id) fetchOrder();
-  }, [id]);
+  }, [id, token]); // Add token as a dependency to avoid fetches with an outdated token
 
   const handleUpdate = async () => {
     if (status === initialStatus) {
@@ -54,11 +60,11 @@ const OrderStatusUpdate = () => {
       });
 
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Failed to update status");
+        const data = await res.json();
+        throw new Error(data.message || "Failed to update status");
       }
 
-      // Redirect to the updated order details page
+      // Redirect back to order details after successful status update
       navigate(`/admin/orders/${id}`);
     } catch (err: any) {
       console.error(err);
@@ -71,20 +77,29 @@ const OrderStatusUpdate = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Update Order Status</h1>
+
       {error && <p className="text-red-600 mb-4">{error}</p>}
-      <select
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        className="border px-3 py-2 rounded w-full mb-4"
-        disabled={loading}
+
+      {fetching ? ( // Show loading state while fetching the order details
+        <p className="text-gray-500">Loading order...</p>
+      ) : (
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="border px-3 py-2 rounded w-full mb-4"
+          disabled={loading || status === initialStatus} // Disable select if status hasn't changed
+        >
+          <option value="pending">Pending</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      )}
+
+      <Button
+        onClick={handleUpdate}
+        disabled={loading || status === initialStatus || fetching} // Disable button if order is still loading or no changes made
       >
-        <option value="pending">Pending</option>
-        <option value="processing">Processing</option>
-        <option value="shipped">Shipped</option>
-        <option value="delivered">Delivered</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
-      <Button onClick={handleUpdate} disabled={loading || status === initialStatus}>
         {loading ? "Updating..." : "Update Status"}
       </Button>
     </div>

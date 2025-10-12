@@ -7,8 +7,11 @@ const ProductsList = () => {
   const { token } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
+  // Fetch products function
   const fetchProducts = async () => {
+    setLoading(true); // Start loading
     try {
       const res = await fetch("http://localhost:5000/api/products", {
         headers: {
@@ -21,12 +24,14 @@ const ProductsList = () => {
     } catch (err) {
       console.error(err);
       setError("Could not load products.");
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [token]);
 
   return (
     <div className="p-6 bg-indigo-50 min-h-screen">
@@ -34,7 +39,9 @@ const ProductsList = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-black">Products</h1>
         <Link to="/admin/products/new">
-          <Button className="bg-indigo-700 hover:bg-indigo-800 text-white">Add/Manage</Button>
+          <Button className="bg-indigo-700 hover:bg-indigo-800 text-white">
+            Add/Manage
+          </Button>
         </Link>
       </div>
 
@@ -45,7 +52,18 @@ const ProductsList = () => {
         </p>
       )}
 
+      {/* Loading Spinner */}
+      {loading && (
+        <div className="flex justify-center items-center py-6">
+          <span className="animate-spin border-4 border-t-4 border-indigo-600 rounded-full w-12 h-12"></span>
+        </div>
+      )}
+
       {/* Product Grid */}
+      {!loading && products.length === 0 && (
+        <p className="text-center text-black text-lg">No products found.</p>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
           <div

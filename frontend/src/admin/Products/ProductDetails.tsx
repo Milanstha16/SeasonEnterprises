@@ -10,8 +10,10 @@ const ProductDetails = () => {
 
   const [product, setProduct] = useState<any | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true); // New loading state
 
   const fetchProduct = async () => {
+    setLoading(true); // Start loading
     try {
       const res = await fetch(`http://localhost:5000/api/products/${id}`, {
         headers: {
@@ -19,11 +21,20 @@ const ProductDetails = () => {
         },
       });
       if (!res.ok) throw new Error("Failed to fetch product");
+
       const data = await res.json();
+
+      if (!data) {
+        setError("Product not found.");
+        return;
+      }
+
       setProduct(data);
     } catch (err) {
       console.error(err);
       setError("Could not load product.");
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
@@ -41,10 +52,20 @@ const ProductDetails = () => {
       </div>
     );
 
-  if (!product)
+  if (loading)
     return (
       <div className="p-6 text-center text-black">
         <p>Loading product details...</p>
+      </div>
+    );
+
+  if (!product)
+    return (
+      <div className="p-6 text-center text-black">
+        <p>Product not found.</p>
+        <Button variant="outline" onClick={() => navigate("/admin/products")}>
+          Back to Products List
+        </Button>
       </div>
     );
 
@@ -60,6 +81,9 @@ const ProductDetails = () => {
         src={`http://localhost:5000/uploads/${product.image}`}
         alt={product.name}
         className="w-full max-h-96 object-cover rounded-lg shadow-md mb-6"
+        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) =>
+          (e.target as HTMLImageElement).src = "https://via.placeholder.com/400" // Fallback image
+        }
       />
 
       <div className="space-y-2 text-black text-lg">

@@ -21,9 +21,12 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: function (req, file, cb) {
-    if (!file.mimetype.startsWith('image/')) {
+    const validMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    
+    if (!validMimeTypes.includes(file.mimetype)) {
       return cb(new Error('Only image files are allowed!'), false);
     }
+
     cb(null, true);
   },
 });
@@ -32,7 +35,14 @@ const upload = multer({
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
-    res.json(products);
+
+    // Add 'outOfStock' flag based on stock
+    const formattedProducts = products.map(product => ({
+      ...product.toObject(),
+      outOfStock: product.stock <= 0,
+    }));
+
+    res.json(formattedProducts);
   } catch (err) {
     res.status(500).json({ msg: 'Failed to fetch products' });
   }
@@ -62,8 +72,13 @@ router.post(
       const { name, description, price, category, stock } = req.body;
       const image = req.file ? req.file.filename : null;
 
-      if (!name || !price || !category || !stock || !image) {
+      if (!name || !price || !category || stock === undefined || stock === null || !image) {
         return res.status(400).json({ msg: 'All fields including image are required' });
+      }
+
+      // Ensure stock is valid and non-negative
+      if (stock < 0) {
+        return res.status(400).json({ msg: 'Stock cannot be negative' });
       }
 
       const product = new Product({
@@ -110,6 +125,12 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
       return res.status(404).json({ msg: 'Product not found' });
     }
 
+    // Ensure stock is valid
+    if (stock < 0) {
+      return res.status(400).json({ msg: 'Stock cannot be negative' });
+    }
+
+    // Update product
     product.name = name || product.name;
     product.description = description || product.description;
     product.price = price || product.price;
@@ -134,7 +155,11 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ msg: 'Product not found' });
     }
 
-    res.json(product);
+    // Add 'outOfStock' flag to the product
+    res.json({
+      ...product.toObject(),
+      outOfStock: product.stock <= 0,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Failed to fetch product' });

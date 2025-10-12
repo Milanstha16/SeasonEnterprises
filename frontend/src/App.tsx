@@ -44,6 +44,8 @@ import { CartProvider } from "@/components/context/CartContext";
 import { AuthProvider, useAuth } from "@/components/context/AuthContext";
 import { HelmetProvider } from "react-helmet-async";
 import { useEffect } from "react";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 
 // ✅ Public Layout (Navbar + Footer)
 const PublicLayout = () => {
@@ -98,7 +100,17 @@ const router = createBrowserRouter(
           children: [
             { index: true, element: <Index /> },
             { path: "cart", element: <CartPage /> },
-            { path: "checkout", element: <CheckoutPage /> },
+            
+            // ✅ Wrap CheckoutPage with Elements provider
+            {
+              path: "checkout",
+              element: (
+                <Elements stripe={loadStripe("pk_test_51SH7TZCnCfQ1XzuSdNaOj13gAjPfFpGS577x52P92cIIsPdUBfhQ1wWWxFQNOz9iYP7jHxAp6J26tXCAFVP03GTl00y4IT7nJ6")}>
+                  <CheckoutPage />
+                </Elements>
+              ),
+            },
+
             { path: "checkoutsuccess", element: <CheckoutSuccess /> },
             { path: "contact", element: <ContactPage /> },
             { path: "account", element: <AccountPage /> },

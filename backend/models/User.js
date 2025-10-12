@@ -1,12 +1,20 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+const CartItemSchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+  quantity: { type: Number, default: 1 },
+});
+
 const userSchema = new mongoose.Schema(
   {
     name: String,
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, default: "user" },
+
+    // Cart to hold user's items before purchase
+    cart: [CartItemSchema],
   },
   { timestamps: true }
 );
