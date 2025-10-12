@@ -12,7 +12,7 @@ import {
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
-import Index from "./components/pages/Index";
+import Center from "./components/pages/Center";
 import NotFound from "./components/pages/NotFound";
 import CartPage from "./components/pages/Cart";
 import CheckoutPage from "./components/pages/Checkout";
@@ -98,7 +98,7 @@ const router = createBrowserRouter(
           path: "/",
           element: <PublicLayout />,
           children: [
-            { index: true, element: <Index /> },
+            { index: true, element: <Center /> },
             { path: "cart", element: <CartPage /> },
             
             // ✅ Wrap CheckoutPage with Elements provider

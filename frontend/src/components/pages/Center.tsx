@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import Hero from "@/components/hero/Homepage";
 import ProductGrid from "@/components/products/ProductGrid";
 
-const Index = () => {
+const Center = () => {
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -40,4 +40,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Center;
