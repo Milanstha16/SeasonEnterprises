@@ -4,19 +4,13 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Apply the authentication middleware to all routes in this router
-router.use(protect); // Ensures that all routes below require authentication
+// Apply authentication middleware to all cart routes
+router.use(protect);
 
-// Get the current user's cart
-router.get("/", getCart);
-
-// Add or update an item in the cart
-router.post("/", addToCart);
-
-// Remove an item from the cart
-router.delete("/:productId", removeFromCart);
-
-// Clear all items from the cart (using DELETE for clarity)
-router.delete("/clear", clearCart);
+// Routes
+router.get("/", getCart);            // GET /api/cart
+router.post("/", addToCart);         // POST /api/cart
+router.delete("/clear", clearCart);  // DELETE /api/cart/clear ✅ placed before :productId
+router.delete("/:productId", removeFromCart); // DELETE /api/cart/:productId
 
 export default router;
