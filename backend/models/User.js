@@ -8,24 +8,35 @@ const CartItemSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
   {
-    name: String,
+    name: { type: String },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, default: "user" },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
 
-    // Cart to hold user's items before purchase
+    // User's shopping cart items
     cart: [CartItemSchema],
   },
   { timestamps: true }
 );
 
-// Hash password before save
+// Hash password before saving the user document
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
+// Instance method to compare password for login
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
 const User = mongoose.model("User", userSchema);
+
 export default User;

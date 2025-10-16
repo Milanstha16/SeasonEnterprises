@@ -21,7 +21,10 @@ router.get('/:id', protect, async (req, res) => {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
+    if (
+      req.user.role !== 'admin' &&
+      req.user.id !== req.params.id // decoded JWT user id (string)
+    ) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -35,15 +38,15 @@ router.get('/:id', protect, async (req, res) => {
 // DELETE user by ID (admin only)
 router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
-    // Prevent deleting self (optional safety check)
-    if (req.user._id === req.params.id) {
+    // Prevent deleting own account
+    if (req.user.id === req.params.id) {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
 
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    await user.deleteOne();  // Updated method instead of remove()
+    await user.deleteOne();  // use deleteOne() instead of deprecated remove()
     res.json({ message: 'User deleted successfully' });
   } catch (err) {
     console.error('Delete user error:', err);

@@ -5,7 +5,16 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// Register Route
+// Helper function to generate JWT token
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+};
+
+// ✅ FIXED: Register Route (no manual password hashing)
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -19,16 +28,13 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ msg: "Email already registered" });
     }
 
+    // ✅ Let Mongoose pre-save hook handle password hashing
     const newUser = new User({ name, email, password });
     await newUser.save();
 
-    const token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = generateToken(newUser);
 
-    res.json({
+    res.status(201).json({
       token,
       user: {
         id: newUser._id,
@@ -43,7 +49,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// User Login Route (no admins allowed here)
+// ✅ Login Route
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -66,11 +72,7 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ msg: "Invalid credentials" });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = generateToken(user);
 
     res.json({
       token,

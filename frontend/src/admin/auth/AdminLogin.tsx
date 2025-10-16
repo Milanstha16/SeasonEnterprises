@@ -9,6 +9,7 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [fadeIn, setFadeIn] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -42,8 +43,11 @@ export default function AdminLogin() {
         return;
       }
 
+      // Save token and user in auth context
       login(token, user);
-      navigate("/admin");
+
+      // ✅ Redirect to admin dashboard
+      return navigate("/admin");
     } catch (err: any) {
       console.error("Login error:", err);
       setError(err.message || "An error occurred during login");

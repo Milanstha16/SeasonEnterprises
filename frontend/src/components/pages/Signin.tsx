@@ -20,35 +20,30 @@ const SignIn = () => {
     const trimmedEmail = email.trim().toLowerCase();
 
     try {
-      console.log("Sending login request with:", { email: trimmedEmail });
-
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: trimmedEmail, password }),
       });
 
-      console.log("Login response status:", response.status);
-
       if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.msg || "Login failed. Please check your credentials.");
+        let errorMsg = "Login failed. Please check your credentials.";
+        try {
+          const errorData = await response.json();
+          if (errorData?.msg) errorMsg = errorData.msg;
+        } catch {
+          // ignore JSON parse error
+        }
+        setError(errorMsg);
         return;
       }
 
       const data = await response.json();
       const { token, user } = data;
 
-      // Save to localStorage
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      // Update auth context
+      // login already stores token + user in localStorage
       login(token, user);
 
-      // Redirect
       navigate("/shop");
     } catch (err) {
       console.error("Login error:", err);
@@ -73,7 +68,9 @@ const SignIn = () => {
         <h1 className="font-display text-3xl mb-2 text-center">Sign In</h1>
 
         {error && (
-          <p className="mb-4 text-red-600 font-semibold text-center">{error}</p>
+          <p className="mb-4 text-red-600 font-semibold text-center" role="alert">
+            {error}
+          </p>
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
@@ -90,6 +87,8 @@ const SignIn = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-muted text-sm"
               required
+              disabled={loading}
+              autoFocus
             />
           </div>
 
@@ -106,6 +105,7 @@ const SignIn = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-muted text-sm"
               required
+              disabled={loading}
             />
           </div>
 

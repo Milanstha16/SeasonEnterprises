@@ -9,43 +9,47 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); // reset error on submit
+    setError(null);
+    setLoading(true);
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      // Sending request to the backend
       const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email: normalizedEmail, password }),
       });
 
-      // Check if the response is not OK (e.g., 4xx or 5xx error)
       if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.msg || "Signup failed");
+        let errorMsg = "Signup failed";
+        try {
+          const errorData = await response.json();
+          if (errorData?.msg) errorMsg = errorData.msg;
+        } catch {
+          // ignore JSON parse error
+        }
+        setError(errorMsg);
         return;
       }
 
-      // If successful, extract token and user data
       const data = await response.json();
       const { token, user } = data;
 
-      // Update auth context
       login(token, user);
-
-      // Redirect to the shop or account page
       navigate("/shop");
-    } catch (error) {
-      console.error("Signup error:", error);
+    } catch (err) {
+      console.error("Signup error:", err);
       setError("An error occurred during signup. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,13 +67,13 @@ const Signup = () => {
       <div className="w-full max-w-md px-6 py-10 border rounded-lg shadow-sm bg-white">
         <h1 className="font-display text-3xl mb-2 text-center">Create Account</h1>
 
-        {/* Display error message */}
         {error && (
-          <p className="mb-4 text-red-600 font-semibold text-center">{error}</p>
+          <p className="mb-4 text-red-600 font-semibold text-center" role="alert">
+            {error}
+          </p>
         )}
 
-        {/* Signup Form */}
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <div>
             <label htmlFor="name" className="block text-sm font-medium mb-1">
               Full Name
@@ -81,6 +85,8 @@ const Signup = () => {
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-muted text-sm"
               required
+              disabled={loading}
+              autoFocus
             />
           </div>
 
@@ -95,14 +101,12 @@ const Signup = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-muted text-sm"
               required
+              disabled={loading}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium mb-1"
-            >
+            <label htmlFor="password" className="block text-sm font-medium mb-1">
               Password
             </label>
             <input
@@ -112,16 +116,15 @@ const Signup = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-muted text-sm"
               required
+              disabled={loading}
             />
           </div>
 
-          {/* Submit Button */}
-          <Button type="submit" className="w-full">
-            Sign Up
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Signing Up..." : "Sign Up"}
           </Button>
         </form>
 
-        {/* Link to Sign In page */}
         <p className="mt-6 text-sm text-center text-muted-foreground">
           Already have an account?{" "}
           <Link to="/signin" className="text-primary hover:underline">

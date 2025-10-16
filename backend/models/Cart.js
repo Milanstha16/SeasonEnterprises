@@ -19,23 +19,26 @@ const CartSchema = new mongoose.Schema(
         quantity: { 
           type: Number, 
           required: true, 
-          default: 1 
+          default: 1,
+          min: [1, 'Quantity cannot be less than 1']
         },
-        // Optional: You can store price and other details here
         price: { 
           type: Number, 
-          required: true 
+          required: true,
+          min: [0, 'Price must be positive']
         },
         totalPrice: { 
           type: Number, 
           required: true, 
           default: function () {
-            return this.quantity * this.price; // Calculate total price per item
-          }
+            const qty = this.quantity || 1;
+            const prc = this.price || 0;
+            return qty * prc;
+          },
+          min: [0, 'Total price must be positive']
         },
-        // If you have additional product options like size or color
         variant: {
-          type: String,  // Example: 'size' or 'color'
+          type: String,
           required: false
         },
       }
@@ -43,7 +46,8 @@ const CartSchema = new mongoose.Schema(
     totalPrice: { 
       type: Number, 
       default: 0, 
-      required: true 
+      required: true,
+      min: [0, 'Total cart price must be positive']
     }
   },
   { timestamps: true }
@@ -55,5 +59,6 @@ CartSchema.pre('save', function (next) {
   next();
 });
 
-// Create a model from the schema
-export default mongoose.model("Cart", CartSchema);
+const Cart = mongoose.model("Cart", CartSchema);
+
+export default Cart;

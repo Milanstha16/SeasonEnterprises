@@ -22,18 +22,20 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-// Ensure the environment variable exists, or fall back to a default
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://seasonenterprises.onrender.com";
+// ✅ API base URL from .env
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-console.log("API_BASE_URL:", API_BASE_URL);
+if (!API_BASE_URL) {
+  throw new Error("❌ VITE_API_BASE_URL is not defined in your environment.");
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch cart from backend on login
+  // 🔄 Fetch cart from backend on login
   useEffect(() => {
     if (!token) {
       setItems([]);
@@ -42,6 +44,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const fetchCart = async () => {
       setLoading(true);
+      setError(null);
       try {
         const res = await fetch(`${API_BASE_URL}/api/cart`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -51,19 +54,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const data = await res.json();
 
-        const mappedItems: CartItem[] = data.items
-          .filter((item: any) => item.productId)
-          .map((item: any) => ({
-            id: item.productId._id,
-            name: item.productId.name,
-            price: item.productId.price,
-            image: item.productId.image
-              ? item.productId.image.startsWith("http")
-                ? item.productId.image
-                : `${API_BASE_URL}/${item.productId.image}`
-              : "/default-image.jpg",
-            quantity: item.quantity,
-          }));
+        const mappedItems: CartItem[] = data.items.map((item: any) => ({
+          id: item.id ?? item.productId._id,
+          name: item.name ?? item.productId.name,
+          price: item.price ?? item.productId.price,
+          image: item.image
+            ? item.image.startsWith("http")
+              ? item.image
+              : `${API_BASE_URL}/${item.image}`
+            : item.productId.image
+            ? item.productId.image.startsWith("http")
+              ? item.productId.image
+              : `${API_BASE_URL}/${item.productId.image}`
+            : "/default-image.jpg",
+          quantity: item.quantity,
+        }));
 
         setItems(mappedItems);
       } catch (error) {
@@ -78,22 +83,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     fetchCart();
   }, [token]);
 
-  // ✅ FIXED: Corrected syncCartWithBackend to match backend expectations
+  // 🔄 Sync cart to backend
   const syncCartWithBackend = async (updatedItems: CartItem[]) => {
     if (!token) return;
 
     try {
       setLoading(true);
+      setError(null);
 
       const payload = {
         items: updatedItems.map((item) => ({
           productId: item.id,
           quantity: item.quantity,
-          priceAtPurchase: item.price,
+          price: item.price,
         })),
       };
-
-      console.log("Syncing cart payload:", payload);
 
       const response = await fetch(`${API_BASE_URL}/api/cart`, {
         method: "POST",
@@ -106,34 +110,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed syncing cart with backend");
+        throw new Error(errorData.msg || "Failed syncing cart with backend");
       }
-
-      console.log("Cart synced successfully with backend");
     } catch (err) {
-      console.error("Failed syncing cart with backend", err);
+      console.error("Sync cart error:", err);
       setError("Failed to sync cart. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // ➕ Add item
   const add: CartContextValue["add"] = (item, qty = 1) => {
     setItems((prev) => {
       const found = prev.find((p) => p.id === item.id);
-      let newItems;
-      if (found) {
-        newItems = prev.map((p) =>
-          p.id === item.id ? { ...p, quantity: p.quantity + qty } : p
-        );
-      } else {
-        newItems = [...prev, { ...item, quantity: qty }];
-      }
+      const newItems = found
+        ? prev.map((p) =>
+            p.id === item.id ? { ...p, quantity: p.quantity + qty } : p
+          )
+        : [...prev, { ...item, quantity: qty }];
+
       syncCartWithBackend(newItems);
       return newItems;
     });
   };
 
+  // ❌ Remove item
   const remove: CartContextValue["remove"] = (id) => {
     setItems((prev) => {
       const newItems = prev.filter((p) => p.id !== id);
@@ -142,7 +144,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // 🔁 Update quantity (ignore if qty <= 0)
   const update: CartContextValue["update"] = (id, qty) => {
+    if (qty <= 0) {
+      remove(id);
+      return;
+    }
     setItems((prev) => {
       const newItems = prev.map((p) => (p.id === id ? { ...p, quantity: qty } : p));
       syncCartWithBackend(newItems);
@@ -150,6 +157,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // 🗑️ Clear cart
   const clear = () => {
     setItems([]);
     if (!token) return;
@@ -160,7 +168,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to clear cart");
-        console.log("Cart cleared successfully from backend");
       })
       .catch((err) => {
         console.error(err);

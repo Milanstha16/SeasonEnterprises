@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Route imports
+// Routes
 import ProductRoutes from "./routes/ProductRoutes.js";
 import AuthRoutes from "./routes/AuthRoutes.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
@@ -15,26 +15,27 @@ import ContactRoutes from "./routes/ContactRoutes.js";
 import CartRoutes from "./routes/CartRoutes.js";
 import PaymentRoutes from "./routes/PaymentRoutes.js";
 
-// Stripe and PayPal integration
+// Stripe & PayPal
 import stripe from "stripe";
 import paypal from "paypal-rest-sdk";
 
-// Initialize environment variables
+// Load environment variables
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Fix __dirname for ES Modules
+// Fix __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// CORS configuration
-const corsOptions = {
+// Middleware
+app.use(cors({
   origin: function (origin, callback) {
     if (
       !origin ||
-      origin === "http://localhost:8080" ||  // Allow frontend URL
-      /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin)  // Allow local IP addresses
+      origin === "http://localhost:8080" ||  // Allow frontend dev
+      /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin)  // Local IP
     ) {
       callback(null, true);
     } else {
@@ -44,12 +45,9 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
-};
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json());
-
-// Serve uploaded images from /uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
@@ -60,53 +58,51 @@ app.use("/api/users", UserRoutes);
 app.use("/api/orders", OrderRoutes);
 app.use("/api/contact", ContactRoutes);
 app.use("/api/cart", CartRoutes);
-app.use('/api/payment/stripe', PaymentRoutes);  // Refined payment route
+app.use("/api/payment/stripe", PaymentRoutes);
 
 // Test route
 app.get("/", (req, res) => {
   res.send("API is running!");
 });
 
-// MongoDB connection
+// MongoDB connection with logging
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected");
+  .connect(process.env.MONGODB_URI)
+  .then((conn) => {
+    console.log(`✅ MongoDB connected to database: ${conn.connection.name}`);
     app.listen(PORT, () =>
-      console.log(`Server running on http://localhost:${PORT}`)
+      console.log(`🚀 Server running on http://localhost:${PORT}`)
     );
   })
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
-    process.exit(1);  // Exit on error
+    console.error("❌ MongoDB connection error:", err.message);
+    process.exit(1);
   });
 
-// Check if Stripe secret key exists
+// Stripe check
 if (!process.env.STRIPE_SECRET_KEY) {
-  console.error("STRIPE_SECRET_KEY is not defined in environment variables");
+  console.error("❌ STRIPE_SECRET_KEY missing in environment");
   process.exit(1);
 }
 
-// Stripe client initialization
-const stripeClient = stripe(process.env.STRIPE_SECRET_KEY); // Stripe secret key
+const stripeClient = stripe(process.env.STRIPE_SECRET_KEY);
 
-// Check if PayPal credentials are set
+// PayPal config
 if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) {
-  console.error("PayPal credentials not defined in environment variables");
+  console.error("❌ PayPal credentials not found in environment");
   process.exit(1);
 }
 
-// PayPal configuration
 paypal.configure({
   mode: "sandbox", // Change to 'live' for production
-  client_id: process.env.PAYPAL_CLIENT_ID, // PayPal Client ID
-  client_secret: process.env.PAYPAL_SECRET, // PayPal Client Secret
+  client_id: process.env.PAYPAL_CLIENT_ID,
+  client_secret: process.env.PAYPAL_SECRET,
 });
 
-// Stripe payment creation endpoint (example)
+// Stripe example endpoint
 app.post("/api/payment/stripe", async (req, res) => {
   const { amount, currency = "usd", items } = req.body;
-  
+
   try {
     const session = await stripeClient.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -117,7 +113,7 @@ app.post("/api/payment/stripe", async (req, res) => {
             name: item.name,
             description: item.description,
           },
-          unit_amount: item.price * 100, // Amount in cents
+          unit_amount: item.price * 100,
         },
         quantity: item.quantity,
       })),
@@ -128,37 +124,35 @@ app.post("/api/payment/stripe", async (req, res) => {
 
     res.json({ url: session.url });
   } catch (error) {
-    console.error("Error with Stripe payment:", error);
-    res.status(500).json({ error: error.message || "Stripe payment creation failed" });
+    console.error("Stripe payment error:", error);
+    res.status(500).json({ error: error.message || "Stripe error" });
   }
 });
 
-// PayPal payment creation endpoint (example)
+// PayPal example endpoint
 app.post("/api/payment/paypal", (req, res) => {
   const { amount, currency = "USD", items } = req.body;
-  
+
   const create_payment_json = {
     intent: "sale",
     payer: {
       payment_method: "paypal",
     },
-    transactions: [
-      {
-        amount: {
-          currency,
-          total: amount.toString(),
-        },
-        description: "Your order description",
-        item_list: {
-          items: items.map(item => ({
-            name: item.name,
-            price: item.price.toString(),
-            currency,
-            quantity: item.quantity,
-          })),
-        },
+    transactions: [{
+      amount: {
+        currency,
+        total: amount.toString(),
       },
-    ],
+      description: "Your order description",
+      item_list: {
+        items: items.map(item => ({
+          name: item.name,
+          price: item.price.toString(),
+          currency,
+          quantity: item.quantity,
+        })),
+      },
+    }],
     redirect_urls: {
       return_url: `${process.env.FRONTEND_URL}/paypal-success`,
       cancel_url: `${process.env.FRONTEND_URL}/paypal-cancel`,
@@ -167,7 +161,7 @@ app.post("/api/payment/paypal", (req, res) => {
 
   paypal.payment.create(create_payment_json, function (error, payment) {
     if (error) {
-      console.error("Error with PayPal payment:", error);
+      console.error("PayPal error:", error);
       res.status(500).json({ error: "PayPal payment creation failed" });
     } else {
       const approvalUrl = payment.links.find(link => link.rel === "approval_url")?.href;
