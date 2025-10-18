@@ -22,16 +22,17 @@ const OrderSchema = new mongoose.Schema(
         priceAtPurchase: {
           type: Number,
           required: true,
-          min: 0,  // Ensure price is non-negative
+          min: 0,  // price can’t be negative
         },
         quantity: {
           type: Number,
           required: true,
-          min: 1,  // Ensure at least one item is purchased
+          min: 1,  // must order at least one
         },
         stockAvailable: {
           type: Number,
-          required: true, // Track stock availability
+          required: true,
+          min: 0,  // stock can't be negative either
         },
       },
     ],
@@ -39,12 +40,12 @@ const OrderSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       required: true,
-      min: 0,  // Ensure non-negative total amount
+      min: 0,
     },
 
     paymentMethod: {
       type: String,
-      enum: ["paypal", "stripe", "credit_card", "bank_transfer"],  // Extensible payment methods
+      enum: ["paypal", "stripe", "credit_card", "bank_transfer"], 
       required: true,
     },
 
@@ -57,7 +58,7 @@ const OrderSchema = new mongoose.Schema(
     transactionId: {
       type: String,
       required: function () {
-        return this.paymentStatus === "paid";  // Transaction ID required if payment is successful
+        return this.paymentStatus === "paid";  // only required if payment is successful
       },
     },
 
@@ -65,30 +66,37 @@ const OrderSchema = new mongoose.Schema(
       fullName: {
         type: String,
         required: true,
+        trim: true,
       },
       email: {
         type: String,
         required: true,
-        match: [/\S+@\S+\.\S+/, 'Please enter a valid email address'], // Email validation
+        trim: true,
+        lowercase: true,
+        match: [/\S+@\S+\.\S+/, 'Please enter a valid email address'],
       },
       address: {
         type: String,
         required: true,
+        trim: true,
       },
       city: {
         type: String,
         required: true,
+        trim: true,
       },
       postalCode: {
         type: String,
         required: true,
-        match: [/^\d{5}$/, 'Please enter a valid postal code'], // Postal code validation (example for US)
+        // Simple postal code regex for US ZIP or generic 5-digit codes (adjust for your locale)
+        match: [/^\d{5}(-\d{4})?$/, 'Please enter a valid postal code'],
+        trim: true,
       },
     },
 
     status: {
       type: String,
-      enum: ["pending", "shipped", "delivered", "cancelled", "returned"],
+      enum: ["pending", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
 
@@ -103,10 +111,10 @@ const OrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Indexing for faster lookups
+// Indexes for performance
 OrderSchema.index({ userId: 1, status: 1 });
 OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ paymentDate: 1 });
-OrderSchema.index({ userId: 1, paymentStatus: 1 });  // Compound index for payment status and user
+OrderSchema.index({ userId: 1, paymentStatus: 1 });
 
 export default mongoose.model("Order", OrderSchema);

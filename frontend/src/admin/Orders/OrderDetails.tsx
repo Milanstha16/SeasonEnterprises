@@ -101,7 +101,9 @@ const OrderDetails = () => {
         <Link to={`/admin/orders/${order._id}/update`}>
           <Button 
             className="mr-2" 
-            disabled={order.status === "cancelled" || order.status === "shipped"}
+            disabled={order.status === "cancelled"}
+            variant={order.status === "cancelled" ? "secondary" : "default"}
+            title={order.status === "cancelled" ? "Cannot update a cancelled order" : ""}
           >
             Update Status
           </Button>

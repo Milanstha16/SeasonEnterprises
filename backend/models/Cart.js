@@ -7,7 +7,7 @@ const CartSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: "User", 
       required: true, 
-      unique: true 
+      unique: true  // Unique index is automatically created
     },
     items: [
       {
@@ -55,6 +55,7 @@ const CartSchema = new mongoose.Schema(
 
 // Middleware to update cart's totalPrice whenever an item is added/updated
 CartSchema.pre('save', function (next) {
+  // Update the totalPrice by summing the totalPrice of each item in the cart
   this.totalPrice = this.items.reduce((total, item) => total + item.totalPrice, 0);
   next();
 });

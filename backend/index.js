@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import os from "os";
 
 // Routes
 import ProductRoutes from "./routes/ProductRoutes.js";
@@ -16,11 +17,30 @@ import CartRoutes from "./routes/CartRoutes.js";
 import PaymentRoutes from "./routes/PaymentRoutes.js";
 
 // Stripe & PayPal
-import stripe from "stripe";
+import Stripe from "stripe";
 import paypal from "paypal-rest-sdk";
 
 // Load environment variables
 dotenv.config();
+
+// Automatically set FRONTEND_URL if missing
+function getLocalIpAddress() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+if (!process.env.FRONTEND_URL) {
+  const localIp = getLocalIpAddress();
+  process.env.FRONTEND_URL = `http://${localIp}:8080`;
+  console.log(`⚠️ FRONTEND_URL not set in .env, defaulting to ${process.env.FRONTEND_URL}`);
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,17 +49,20 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middleware
+// CORS setup
 app.use(cors({
-  origin: function (origin, callback) {
-    if (
-      !origin ||
-      origin === "http://localhost:8080" ||  // Allow frontend dev
-      /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin)  // Local IP
-    ) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS: " + origin));
+  origin: (origin, callback) => {
+    try {
+      if (
+        !origin ||
+        origin === "http://localhost:8080" || // frontend dev URL
+        /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) // local IPs with port
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS: " + origin));
+    } catch (err) {
+      callback(err);
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -47,6 +70,7 @@ app.use(cors({
   credentials: true,
 }));
 
+// Middleware to parse JSON and serve static uploads
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -60,14 +84,37 @@ app.use("/api/contact", ContactRoutes);
 app.use("/api/cart", CartRoutes);
 app.use("/api/payment/stripe", PaymentRoutes);
 
-// Test route
+// Simple test route
 app.get("/", (req, res) => {
   res.send("API is running!");
 });
 
-// MongoDB connection with logging
-mongoose
-  .connect(process.env.MONGODB_URI)
+// Critical environment checks before starting services
+if (!process.env.MONGODB_URI) {
+  console.error("❌ MONGODB_URI missing in environment");
+  process.exit(1);
+}
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error("❌ STRIPE_SECRET_KEY missing in environment");
+  process.exit(1);
+}
+if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) {
+  console.error("❌ PayPal credentials missing in environment");
+  process.exit(1);
+}
+// Removed the exit on missing FRONTEND_URL since it’s now set automatically
+
+// Initialize Stripe and PayPal after env checks
+const stripeClient = Stripe(process.env.STRIPE_SECRET_KEY);
+
+paypal.configure({
+  mode: "sandbox", // change to 'live' for production
+  client_id: process.env.PAYPAL_CLIENT_ID,
+  client_secret: process.env.PAYPAL_SECRET,
+});
+
+// Connect to MongoDB and start server
+mongoose.connect(process.env.MONGODB_URI)
   .then((conn) => {
     console.log(`✅ MongoDB connected to database: ${conn.connection.name}`);
     app.listen(PORT, () =>
@@ -79,27 +126,7 @@ mongoose
     process.exit(1);
   });
 
-// Stripe check
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error("❌ STRIPE_SECRET_KEY missing in environment");
-  process.exit(1);
-}
-
-const stripeClient = stripe(process.env.STRIPE_SECRET_KEY);
-
-// PayPal config
-if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) {
-  console.error("❌ PayPal credentials not found in environment");
-  process.exit(1);
-}
-
-paypal.configure({
-  mode: "sandbox", // Change to 'live' for production
-  client_id: process.env.PAYPAL_CLIENT_ID,
-  client_secret: process.env.PAYPAL_SECRET,
-});
-
-// Stripe example endpoint
+// Stripe payment endpoint
 app.post("/api/payment/stripe", async (req, res) => {
   const { amount, currency = "usd", items } = req.body;
 
@@ -113,7 +140,7 @@ app.post("/api/payment/stripe", async (req, res) => {
             name: item.name,
             description: item.description,
           },
-          unit_amount: item.price * 100,
+          unit_amount: Math.round(item.price * 100), // Stripe expects integer cents
         },
         quantity: item.quantity,
       })),
@@ -129,15 +156,13 @@ app.post("/api/payment/stripe", async (req, res) => {
   }
 });
 
-// PayPal example endpoint
+// PayPal payment endpoint
 app.post("/api/payment/paypal", (req, res) => {
   const { amount, currency = "USD", items } = req.body;
 
   const create_payment_json = {
     intent: "sale",
-    payer: {
-      payment_method: "paypal",
-    },
+    payer: { payment_method: "paypal" },
     transactions: [{
       amount: {
         currency,
@@ -159,13 +184,21 @@ app.post("/api/payment/paypal", (req, res) => {
     },
   };
 
-  paypal.payment.create(create_payment_json, function (error, payment) {
+  paypal.payment.create(create_payment_json, (error, payment) => {
     if (error) {
       console.error("PayPal error:", error);
-      res.status(500).json({ error: "PayPal payment creation failed" });
-    } else {
-      const approvalUrl = payment.links.find(link => link.rel === "approval_url")?.href;
-      res.json({ approvalUrl });
+      return res.status(500).json({ error: "PayPal payment creation failed" });
     }
+    const approvalUrl = payment.links.find(link => link.rel === "approval_url")?.href;
+    res.json({ approvalUrl });
   });
+});
+
+// Global error handler (including multer errors etc)
+app.use((err, req, res, next) => {
+  console.error("Global error handler caught:", err);
+  if (err.name === "MulterError" || err.message === "Only image files are allowed") {
+    return res.status(400).json({ msg: err.message });
+  }
+  res.status(err.status || 500).json({ msg: err.message || "Internal Server Error" });
 });

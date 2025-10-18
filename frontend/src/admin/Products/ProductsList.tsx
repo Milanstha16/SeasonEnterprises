@@ -3,34 +3,47 @@ import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  stock: number;
+  image: string;
+}
+
 const ProductsList = () => {
   const { token } = useAuth();
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   // Fetch products function
   const fetchProducts = async () => {
-    setLoading(true); // Start loading
+    setLoading(true);
+    setError("");
     try {
       const res = await fetch("http://localhost:5000/api/products", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) throw new Error("Failed to fetch products");
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch products");
+      }
+
       const data = await res.json();
       setProducts(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Could not load products.");
+      setError(err.message || "Could not load products.");
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    if (token) fetchProducts();
   }, [token]);
 
   return (
@@ -55,15 +68,16 @@ const ProductsList = () => {
       {/* Loading Spinner */}
       {loading && (
         <div className="flex justify-center items-center py-6">
-          <span className="animate-spin border-4 border-t-4 border-indigo-600 rounded-full w-12 h-12"></span>
+          <span className="animate-spin border-4 border-t-4 border-indigo-600 rounded-full w-12 h-12" />
         </div>
       )}
 
-      {/* Product Grid */}
+      {/* No products message */}
       {!loading && products.length === 0 && (
         <p className="text-center text-black text-lg">No products found.</p>
       )}
 
+      {/* Product Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
           <div
@@ -72,8 +86,12 @@ const ProductsList = () => {
           >
             <img
               src={`http://localhost:5000/uploads/${product.image}`}
-              alt={product.name}
+              alt={product.name || "Product image"}
               className="h-48 w-full object-cover rounded-lg mb-3"
+              onError={(e) =>
+                ((e.target as HTMLImageElement).src =
+                  "https://via.placeholder.com/300x200?text=No+Image")
+              }
             />
             <h2 className="text-lg font-semibold text-black">{product.name}</h2>
             <p className="text-black text-sm mb-1">

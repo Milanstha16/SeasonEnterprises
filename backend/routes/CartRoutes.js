@@ -8,9 +8,9 @@ const router = express.Router();
 router.use(protect);
 
 // Routes
-router.get("/", getCart);            // GET /api/cart
-router.post("/", addToCart);         // POST /api/cart
-router.delete("/clear", clearCart);  // DELETE /api/cart/clear ✅ placed before :productId
+router.get("/", getCart);                    // GET /api/cart
+router.post("/", addToCart);                 // POST /api/cart
+router.delete("/clear", clearCart);          // DELETE /api/cart/clear
 router.delete("/:productId", removeFromCart); // DELETE /api/cart/:productId
 
 export default router;

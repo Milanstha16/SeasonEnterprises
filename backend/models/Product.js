@@ -1,22 +1,33 @@
 import mongoose from 'mongoose';
 
-const productSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  price: { type: Number, required: true },
-  category: String,
-  
-  // Stock field with default value and validation
-  stock: { 
-    type: Number, 
-    required: true, 
-    default: 0,  // Default to 0 if not provided
-    min: [0, 'Stock cannot be negative'], // Ensure stock is non-negative
+// Define the product schema
+const productSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    description: { type: String },
+    price: { type: Number, required: true },
+    category: {
+      type: String,
+      enum: ["Decor", "Clothing", "Jewelry", "Books", "Toys"],
+      required: true,
+    },
+    stock: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: [0, 'Stock cannot be negative'],
+    },
+    image: {
+      type: String,
+      required: true,
+      // ✅ Removed strict URL validation — allows local filenames
+    },
   },
-  
-  image: String,
-}, {
-  timestamps: true, // This adds createdAt and updatedAt fields automatically
-});
+  {
+    timestamps: true,
+  }
+);
+
+productSchema.index({ name: 1, category: 1, price: 1 });
 
 export default mongoose.model('Product', productSchema);

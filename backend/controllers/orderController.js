@@ -1,8 +1,8 @@
 import Order from "../models/Order.js";
 import Stripe from 'stripe';
-const stripe = Stripe('your-stripe-secret-key');
+const stripe = Stripe('sk_test_51SH7TZCnCfQ1XzuSUwhpzMGUlA2XQxIrF10HHXGq8PyeCG6Fjp6QF7mRqWfndJgA3fyEbxuwoFtlpjyCyNU617EW00ACX0eS06'); // Replace with your actual Stripe secret key
 
-// Utility function to calculate total amount
+// Utility function to calculate total amount in cents
 const calculateTotalAmount = (items) => {
   return items.reduce(
     (total, item) => total + item.priceAtPurchase * item.quantity,
@@ -10,7 +10,7 @@ const calculateTotalAmount = (items) => {
   );
 };
 
-// Utility function to validate items (checking for required fields like name, price, quantity)
+// Utility function to validate items
 const validateItems = (items) => {
   items.forEach(item => {
     if (!item.name || typeof item.name !== 'string') {
@@ -25,7 +25,33 @@ const validateItems = (items) => {
   });
 };
 
-// Create a new order (generic function, can be used for both Stripe/PayPal)
+// Create Stripe PaymentIntent - to be called by frontend before order creation
+export const createPaymentIntent = async (req, res) => {
+  try {
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Invalid items for payment" });
+    }
+
+    validateItems(items);
+
+    const amount = Math.round(calculateTotalAmount(items) * 100); // amount in cents
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      payment_method_types: ['card'],
+    });
+
+    res.status(200).json({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error("Error creating payment intent:", error);
+    res.status(500).json({ message: "Payment intent creation failed" });
+  }
+};
+
+// Create a new order after payment is confirmed
 export const createOrder = async (req, res) => {
   try {
     const { userId, items, shipping, paymentMethod, transactionId } = req.body;
@@ -35,26 +61,29 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Validate each item in the order
+    // Validate each item
     try {
       validateItems(items);
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
 
-    // Check for valid shipping data
-    if (!shipping || !shipping.address || !shipping.city || !shipping.zipCode) {
+    // Shipping info validation - make sure to use postalCode
+    if (
+      !shipping.address ||
+      !shipping.city ||
+      !shipping.postalCode // changed from zipCode to postalCode to match frontend
+    ) {
       return res.status(400).json({ message: "Incomplete shipping information" });
     }
 
     const totalAmount = calculateTotalAmount(items);
 
-    // Validate Stripe transactionId (for Stripe payments only)
-    if (paymentMethod === "stripe" && !transactionId) {
-      return res.status(400).json({ message: "Transaction ID is required for Stripe payments" });
-    }
-
+    // Validate Stripe transactionId if payment method is stripe
     if (paymentMethod === "stripe") {
+      if (!transactionId) {
+        return res.status(400).json({ message: "Transaction ID is required for Stripe payments" });
+      }
       try {
         const paymentIntent = await stripe.paymentIntents.retrieve(transactionId);
         if (paymentIntent.status !== 'succeeded') {
@@ -66,7 +95,7 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Create the new order
+    // Create the order
     const newOrder = new Order({
       userId,
       items,
@@ -74,45 +103,40 @@ export const createOrder = async (req, res) => {
       paymentMethod,
       transactionId,
       totalAmount,
-      paymentStatus: "pending", // Default to pending until payment is confirmed
-      status: "pending", // Default status
+      paymentStatus: paymentMethod === "stripe" ? "paid" : "pending", // Mark paid if Stripe payment succeeded
+      status: "pending",
     });
 
-    // Set the payment date for PayPal/Stripe
     if (paymentMethod === "paypal" || paymentMethod === "stripe") {
       newOrder.paymentDate = new Date();
     }
 
-    // Save the order to the database
     const savedOrder = await newOrder.save();
     res.status(201).json(savedOrder);
+
   } catch (error) {
     console.error("Error creating order:", error.message || error);
     res.status(500).json({ message: error.message || "Internal Server Error" });
   }
 };
 
-// Mark order as paid
+// Mark order as paid (optional if you want to update payment status later)
 export const markPaid = async (req, res) => {
   const { orderId, transactionId } = req.body;
   try {
-    // Find the order by ID
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Ensure the order is still pending
     if (order.paymentStatus !== "pending") {
       return res.status(400).json({ message: "Order is already processed" });
     }
 
-    // Mark the order as paid
     order.paymentStatus = "paid";
     order.transactionId = transactionId;
     order.paymentDate = new Date();
 
-    // Save the updated order
     await order.save();
     res.status(200).json(order);
   } catch (error) {
@@ -121,32 +145,13 @@ export const markPaid = async (req, res) => {
   }
 };
 
-// Create a new order for Stripe payments
-export const createOrderWithStripe = async (req, res) => {
-  try {
-    return createOrder(req, res);  // Reuse the generic `createOrder` function for Stripe
-  } catch (error) {
-    console.error("Error creating order with Stripe:", error.message || error);
-    res.status(500).json({ message: error.message || "Error processing Stripe payment" });
-  }
-};
+// Other endpoints (getOrder, getAllOrders, getUserOrders, updateOrderStatus) remain the same as before
 
-// Create a new order for PayPal payments
-export const createOrderWithPaypal = async (req, res) => {
-  try {
-    return createOrder(req, res);  // Reuse the generic `createOrder` function for PayPal
-  } catch (error) {
-    console.error("Error creating order with PayPal:", error.message || error);
-    res.status(500).json({ message: error.message || "Error processing PayPal payment" });
-  }
-};
-
-// Get a single order by ID
 export const getOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate("userId")  // Populate user details
-      .populate("items.productId"); // Populate product details
+      .populate("userId")
+      .populate("items.productId");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -159,7 +164,6 @@ export const getOrder = async (req, res) => {
   }
 };
 
-// Get all orders (admin)
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find().populate("userId");
@@ -170,12 +174,11 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-// Get orders for logged-in user
 export const getUserOrders = async (req, res) => {
   try {
     const orders = await Order.find({ userId: req.user.id })
       .populate("items.productId")
-      .sort({ createdAt: -1 }); // Sort orders by creation date, newest first
+      .sort({ createdAt: -1 });
 
     res.status(200).json(orders);
   } catch (error) {
@@ -184,7 +187,6 @@ export const getUserOrders = async (req, res) => {
   }
 };
 
-// Update order status (e.g., shipped, delivered)
 export const updateOrderStatus = async (req, res) => {
   const { status } = req.body;
   const { orderId } = req.params;
@@ -195,20 +197,17 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const validStatuses = ["pending", "paid", "shipped", "delivered", "cancelled", "returned"];
+    const validStatuses = ["pending", "shipped", "delivered", "cancelled"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    // Set shipping date if status is "shipped"
     if (status === "shipped" && !order.shippingDate) {
       order.shippingDate = new Date();
     } else if (status === "shipped" && order.shippingDate) {
-      // Prevent overwriting the shipping date if it's already set
       return res.status(400).json({ message: "Shipping date already set" });
     }
 
-    // Update the order status
     order.status = status;
     await order.save();
 

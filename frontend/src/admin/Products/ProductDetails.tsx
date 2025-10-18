@@ -3,38 +3,51 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  category: string;
+  stock: number;
+  description?: string;
+  image: string;
+}
+
 const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  const [product, setProduct] = useState<any | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true); // New loading state
+  const [loading, setLoading] = useState(true);
 
   const fetchProduct = async () => {
-    setLoading(true); // Start loading
+    setLoading(true);
+    setError("");
     try {
       const res = await fetch(`http://localhost:5000/api/products/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) throw new Error("Failed to fetch product");
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch product");
+      }
 
       const data = await res.json();
 
-      if (!data) {
-        setError("Product not found.");
-        return;
+      if (!data || data.error) {
+        throw new Error(data.error || "Product not found");
       }
 
       setProduct(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Could not load product.");
+      setError(err.message || "Could not load product.");
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
     }
   };
 
@@ -42,24 +55,26 @@ const ProductDetails = () => {
     if (id) fetchProduct();
   }, [id]);
 
-  if (error)
-    return (
-      <div className="p-6">
-        <p className="text-red-600 font-semibold">{error}</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
-          Go Back
-        </Button>
-      </div>
-    );
-
-  if (loading)
+  if (loading) {
     return (
       <div className="p-6 text-center text-black">
         <p>Loading product details...</p>
       </div>
     );
+  }
 
-  if (!product)
+  if (error) {
+    return (
+      <div className="p-6 text-center text-red-600">
+        <p className="font-semibold">{error}</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+
+  if (!product) {
     return (
       <div className="p-6 text-center text-black">
         <p>Product not found.</p>
@@ -68,21 +83,22 @@ const ProductDetails = () => {
         </Button>
       </div>
     );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex gap-4 mb-6">
-        <Button onClick={() => navigate(-1)}>Back</Button>
+        <Button onClick={() => navigate(-1)}>← Back</Button>
       </div>
 
       <h1 className="text-3xl font-semibold mb-4 text-black">{product.name}</h1>
 
       <img
         src={`http://localhost:5000/uploads/${product.image}`}
-        alt={product.name}
+        alt={product.name || "Product image"}
         className="w-full max-h-96 object-cover rounded-lg shadow-md mb-6"
-        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) =>
-          (e.target as HTMLImageElement).src = "https://via.placeholder.com/400" // Fallback image
+        onError={(e) =>
+          ((e.target as HTMLImageElement).src = "https://via.placeholder.com/400x300?text=No+Image")
         }
       />
 
@@ -98,7 +114,9 @@ const ProductDetails = () => {
         </p>
       </div>
 
-      <p className="mt-6 text-black leading-relaxed">{product.description}</p>
+      {product.description && (
+        <p className="mt-6 text-black leading-relaxed">{product.description}</p>
+      )}
     </div>
   );
 };

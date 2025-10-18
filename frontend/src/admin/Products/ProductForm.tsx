@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
+
+const allowedCategories = ["Decor", "Clothing", "Jewelry", "Books", "Toys"];
 
 const AddProduct = () => {
   const { token } = useAuth();
 
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -15,16 +17,22 @@ const AddProduct = () => {
     image: null as File | null,
   });
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
   const [editForm, setEditForm] = useState({
     name: "",
     price: "",
     category: "",
     stock: "",
+    description: "",
+    image: null as File | null,
   });
 
   const fetchProducts = async () => {
@@ -47,11 +55,28 @@ const AddProduct = () => {
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setError("");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       setForm((prev) => ({ ...prev, image: e.target.files![0] }));
+      setError("");
+    }
+  };
+
+  const handleEditChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+    setError("");
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setEditForm((prev) => ({ ...prev, image: e.target.files![0] }));
+      setError("");
     }
   };
 
@@ -72,7 +97,7 @@ const AddProduct = () => {
     formData.append("price", price);
     formData.append("category", category);
     formData.append("stock", stock);
-    if (image) formData.append("image", image);
+    formData.append("image", image);
 
     try {
       const res = await fetch("http://localhost:5000/api/products/add-product", {
@@ -84,9 +109,9 @@ const AddProduct = () => {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error || "Failed to add product.");
+        const msg = data.msg || data.error || "Failed to add product.";
+        setError(msg);
         return;
       }
 
@@ -99,11 +124,51 @@ const AddProduct = () => {
         stock: "",
         image: null,
       });
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       console.error(err);
       setError("Server error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveEdit = async (id: string) => {
+    setSavingId(id);
+
+    const formData = new FormData();
+    formData.append("name", editForm.name);
+    formData.append("price", editForm.price);
+    formData.append("category", editForm.category);
+    formData.append("stock", editForm.stock);
+    formData.append("description", editForm.description || "");
+    if (editForm.image) {
+      formData.append("image", editForm.image);
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data.msg || data.error || "Failed to update product.";
+        setError(msg);
+        return;
+      }
+
+      fetchProducts();
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update product");
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -127,48 +192,25 @@ const AddProduct = () => {
     }
   };
 
-  const startEditing = (product) => {
+  const startEditing = (product: any) => {
     setEditingId(product._id);
     setEditForm({
       name: product.name,
-      price: product.price,
+      price: product.price.toString(),
       category: product.category,
-      stock: product.stock,
+      stock: product.stock.toString(),
+      description: product.description || "",
+      image: null,
     });
+    setError("");
   };
 
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const saveEdit = async (id: string) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(editForm),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Update failed");
-
-      fetchProducts();
-      setEditingId(null);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to update product");
-    }
-  };
+  const isAddDisabled =
+    !form.name || !form.price || !form.category || !form.stock || !form.image || loading;
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-10 bg-indigo-50 min-h-screen">
-      <h1 className="text-4xl font-bold text-black text-center mb-10">
-        Add Products
-      </h1>
+      <h1 className="text-4xl font-bold text-black text-center mb-10">Add Products</h1>
 
       {error && (
         <div className="mb-6 px-4 py-3 bg-red-100 text-red-700 border border-red-300 rounded-md text-center">
@@ -176,7 +218,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      {/* Add Product Form */}
+      {/* Add Form */}
       <section className="mb-12 bg-white p-6 rounded-xl shadow-md border border-indigo-100">
         <h2 className="text-2xl font-semibold text-black mb-4">Add New Product</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -196,14 +238,19 @@ const AddProduct = () => {
             onChange={handleChange}
             className="px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
           />
-          <input
-            type="text"
+          <select
             name="category"
-            placeholder="Category"
             value={form.category}
             onChange={handleChange}
             className="px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
-          />
+          >
+            <option value="">Select category</option>
+            {allowedCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
           <input
             type="number"
             name="stock"
@@ -220,16 +267,23 @@ const AddProduct = () => {
             className="col-span-1 md:col-span-2 px-4 py-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-indigo-500"
           />
           <input
+            ref={fileInputRef}
             type="file"
-            name="image"
             accept="image/*"
             onChange={handleFileChange}
             className="col-span-1 md:col-span-2"
           />
+          {form.image && (
+            <img
+              src={URL.createObjectURL(form.image)}
+              alt="Preview"
+              className="col-span-1 md:col-span-2 w-40 h-40 object-cover rounded mt-2"
+            />
+          )}
         </div>
         <Button
           onClick={handleAdd}
-          disabled={loading}
+          disabled={isAddDisabled}
           className="bg-indigo-700 hover:bg-indigo-800 text-white"
         >
           {loading ? "Adding..." : "Add Product"}
@@ -240,7 +294,6 @@ const AddProduct = () => {
       <section className="bg-white p-6 rounded-xl shadow-md border border-indigo-100">
         <h2 className="text-2xl font-semibold text-black mb-6">Manage Products</h2>
 
-        {/* Search */}
         <input
           type="text"
           placeholder="Search products..."
@@ -254,7 +307,7 @@ const AddProduct = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products
               .filter((product) =>
-                product.name.toLowerCase().includes(searchTerm.toLowerCase())
+                product.name?.toLowerCase().includes(searchTerm.toLowerCase())
               )
               .map((product) => (
                 <div
@@ -271,19 +324,25 @@ const AddProduct = () => {
                         className="mb-2 w-full px-2 py-1 border rounded"
                       />
                       <input
-                                              type="number"
+                        type="number"
                         name="price"
                         value={editForm.price}
                         onChange={handleEditChange}
                         className="mb-2 w-full px-2 py-1 border rounded"
                       />
-                      <input
-                        type="text"
+                      <select
                         name="category"
                         value={editForm.category}
                         onChange={handleEditChange}
                         className="mb-2 w-full px-2 py-1 border rounded"
-                      />
+                      >
+                        <option value="">Select category</option>
+                        {allowedCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
                       <input
                         type="number"
                         name="stock"
@@ -291,60 +350,70 @@ const AddProduct = () => {
                         onChange={handleEditChange}
                         className="mb-2 w-full px-2 py-1 border rounded"
                       />
-                      <div className="flex gap-2 mt-2">
+                      <textarea
+                        name="description"
+                        value={editForm.description}
+                        onChange={handleEditChange}
+                        className="mb-2 w-full px-2 py-1 border rounded"
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditFileChange}
+                        className="mb-2 w-full"
+                      />
+                      {editForm.image && (
+                        <img
+                          src={URL.createObjectURL(editForm.image)}
+                          alt="Edit Preview"
+                          className="mb-2 w-32 h-32 object-cover rounded"
+                        />
+                      )}
+
+                      <div className="flex gap-2">
                         <Button
-                          size="sm"
                           onClick={() => saveEdit(product._id)}
                           className="bg-green-600 hover:bg-green-700 text-white"
+                          disabled={savingId === product._id}
                         >
-                          Save
+                          {savingId === product._id ? "Saving..." : "Save"}
                         </Button>
                         <Button
-                          size="sm"
-                          variant="outline"
                           onClick={() => setEditingId(null)}
+                          className="bg-gray-300 hover:bg-gray-400 text-black"
                         >
                           Cancel
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <>
+                    <div className="flex flex-col">
                       <img
                         src={`http://localhost:5000/uploads/${product.image}`}
                         alt={product.name}
-                        className="h-40 w-full object-cover mb-3 rounded"
+                        className="w-full h-48 object-cover rounded mb-2"
                       />
-                      <h3 className="text-lg font-semibold text-black mb-1">
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-black mb-1">
-                        Category: {product.category}
-                      </p>
-                      <p className="text-sm text-black mb-1">
-                        Stock: {product.stock}
-                      </p>
-                      <p className="text-gray-700 font-medium">
-                        Price: ${parseFloat(product.price).toFixed(2)}
-                      </p>
-                      <div className="flex gap-2 mt-3">
+                      <h3 className="font-semibold text-lg">{product.name}</h3>
+                      <p className="text-gray-600">${product.price}</p>
+                      <p className="text-sm text-gray-500">{product.category}</p>
+                      <p className="text-sm text-gray-500">Stock: {product.stock}</p>
+                      <p className="text-sm mt-2">{product.description}</p>
+                      <div className="mt-4 flex gap-2">
                         <Button
-                          size="sm"
                           onClick={() => startEditing(product)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white"
                         >
                           Edit
                         </Button>
                         <Button
-                          variant="destructive"
-                          size="sm"
                           onClick={() => handleDelete(product._id)}
                           disabled={deletingId === product._id}
+                          className="bg-red-600 hover:bg-red-700 text-white"
                         >
                           {deletingId === product._id ? "Deleting..." : "Delete"}
                         </Button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               ))}
@@ -356,5 +425,3 @@ const AddProduct = () => {
 };
 
 export default AddProduct;
-
-                      
