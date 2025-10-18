@@ -1,6 +1,6 @@
 import Order from "../models/Order.js";
 import Stripe from 'stripe';
-const stripe = Stripe('sk_test_51SH7TZCnCfQ1XzuSUwhpzMGUlA2XQxIrF10HHXGq8PyeCG6Fjp6QF7mRqWfndJgA3fyEbxuwoFtlpjyCyNU617EW00ACX0eS06'); // Replace with your actual Stripe secret key
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY); // Using an environment variable for security
 
 // Utility function to calculate total amount in cents
 const calculateTotalAmount = (items) => {
