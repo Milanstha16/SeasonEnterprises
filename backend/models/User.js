@@ -15,6 +15,9 @@ const userSchema = new mongoose.Schema(
 
     // User's shopping cart items
     cart: [CartItemSchema],
+
+    // Add this new field for profile picture URL or file path
+    profilePicture: { type: String, default: "" },
   },
   { timestamps: true }
 );

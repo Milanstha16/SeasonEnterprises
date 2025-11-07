@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
-const allowedCategories = ["Decor", "Clothing", "Jewelry", "Books", "Toys"];
+const allowedCategories = ['Bags', 'Meditation', 'Jewelry', 'Clothing', 'Home Decor', 'Scarves', 'Stones'];
 
 const AddProduct = () => {
   const { token } = useAuth();

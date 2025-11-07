@@ -51,6 +51,7 @@ export default function Shop() {
       name: product.name,
       price: product.price,
       image: `${BASE_URL}/uploads/${product.image}`,
+      stockAvailable: product.stock ?? 0, // ✅ Added this
     });
 
     toast({
@@ -67,6 +68,7 @@ export default function Shop() {
       name: product.name,
       price: product.price,
       image: `${BASE_URL}/uploads/${product.image}`,
+      stockAvailable: product.stock ?? 0, // ✅ Added this
     });
 
     toast({
@@ -117,7 +119,9 @@ export default function Shop() {
             className="w-full md:w-1/4 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition"
           >
             {categories.map((category) => (
-              <option key={category}>{category}</option>
+              <option key={category} value={category}>
+                {category}
+              </option>
             ))}
           </select>
         </div>

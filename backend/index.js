@@ -65,7 +65,7 @@ app.use(cors({
       callback(err);
     }
   },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  // <-- PATCH added here
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 }));
@@ -73,6 +73,7 @@ app.use(cors({
 // Middleware to parse JSON and serve static uploads
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/Profiles", express.static(path.join(__dirname, "Profiles")));
 
 // Routes
 app.use("/api/products", ProductRoutes);

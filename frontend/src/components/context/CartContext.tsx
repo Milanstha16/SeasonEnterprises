@@ -16,6 +16,8 @@ interface CartContextValue {
   add: (item: Omit<CartItem, "quantity">, qty?: number) => void;
   remove: (id: string) => void;
   update: (id: string, qty: number) => void;
+  increaseQuantity: (id: string) => void;
+  decreaseQuantity: (id: string) => void;
   clear: () => void;
   count: number;
   total: number;
@@ -28,10 +30,19 @@ if (!API_BASE_URL) {
   throw new Error("❌ VITE_API_BASE_URL is not defined in your environment.");
 }
 
+// Debounce helper
+function debounce<F extends (...args: any[]) => void>(func: F, delay: number) {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 🛒 Fetch cart on login
@@ -42,7 +53,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     const fetchCart = async () => {
-      setLoading(true);
+      setInitialLoading(true);
       setError(null);
       try {
         const res = await fetch(`${API_BASE_URL}/api/cart`, {
@@ -55,9 +66,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const mappedItems: CartItem[] = (data.items ?? []).map((item: any) => {
           const product = item.productId ?? {};
-          const imagePath =
-            item.image || product.image || "";
-
+          const imagePath = item.image || product.image || "";
           const imageUrl = imagePath.startsWith("http")
             ? imagePath
             : imagePath
@@ -70,7 +79,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             price: item.price ?? product.price ?? 0,
             image: imageUrl,
             quantity: item.quantity ?? 1,
-            stockAvailable: product.stockAvailable ?? 0, // ✅ includes stockAvailable
+            stockAvailable: product.stockAvailable ?? 0,
           };
         });
 
@@ -80,7 +89,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setError("Failed to fetch your cart. Please try again later.");
         setItems([]);
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
       }
     };
 
@@ -92,7 +101,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     try {
-      setLoading(true);
       setError(null);
 
       const payload = {
@@ -119,30 +127,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error("Sync cart error:", err);
       setError("Failed to sync cart. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
+
+  // Debounced version to avoid flooding backend on rapid changes
+  const debouncedSyncCart = useMemo(() => debounce(syncCartWithBackend, 400), [token]);
 
   // ➕ Add item to cart
   const add: CartContextValue["add"] = (item, qty = 1) => {
     setItems((prev) => {
       const found = prev.find((p) => p.id === item.id);
-
       const newItems = found
         ? prev.map((p) =>
-            p.id === item.id ? { ...p, quantity: p.quantity + qty } : p
+            p.id === item.id
+              ? {
+                  ...p,
+                  quantity: Math.min(p.quantity + qty, item.stockAvailable),
+                }
+              : p
           )
         : [
             ...prev,
             {
               ...item,
-              quantity: qty,
-              stockAvailable: item.stockAvailable ?? 0, // ✅ Ensure it's added if missing
+              quantity: Math.min(qty, item.stockAvailable),
+              stockAvailable: item.stockAvailable ?? 0,
             },
           ];
 
-      syncCartWithBackend(newItems);
+      debouncedSyncCart(newItems);
       return newItems;
     });
   };
@@ -151,25 +164,47 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const remove: CartContextValue["remove"] = (id) => {
     setItems((prev) => {
       const newItems = prev.filter((p) => p.id !== id);
-      syncCartWithBackend(newItems);
+      debouncedSyncCart(newItems);
       return newItems;
     });
   };
 
   // 🔁 Update quantity
   const update: CartContextValue["update"] = (id, qty) => {
-    if (qty <= 0) {
-      remove(id);
-      return;
-    }
-
     setItems((prev) => {
       const newItems = prev.map((p) =>
-        p.id === id ? { ...p, quantity: qty } : p
+        p.id === id
+          ? {
+              ...p,
+              quantity: Math.min(qty, p.stockAvailable),
+            }
+          : p
       );
-      syncCartWithBackend(newItems);
+      debouncedSyncCart(newItems);
       return newItems;
     });
+  };
+
+  // 🔼 Increase quantity
+  const increaseQuantity: CartContextValue["increaseQuantity"] = (id) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    if (item.quantity >= item.stockAvailable) return;
+
+    update(id, item.quantity + 1);
+  };
+
+  // 🔽 Decrease quantity
+  const decreaseQuantity: CartContextValue["decreaseQuantity"] = (id) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+
+    const newQty = item.quantity - 1;
+    if (newQty <= 0) {
+      remove(id);
+    } else {
+      update(id, newQty);
+    }
   };
 
   // 🧹 Clear cart
@@ -191,14 +226,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const total = items.reduce((a, b) => a + b.price * b.quantity, 0);
 
   const value = useMemo(
-    () => ({ items, add, remove, update, clear, count, total }),
+    () => ({
+      items,
+      add,
+      remove,
+      update,
+      increaseQuantity,
+      decreaseQuantity,
+      clear,
+      count,
+      total,
+    }),
     [items, count, total]
   );
 
   return (
     <CartContext.Provider value={value}>
       {error && <div className="text-red-600 p-2">{error}</div>}
-      {loading && <div className="text-gray-500 p-2">Loading...</div>}
+      {initialLoading && <div className="text-gray-500 p-2">Loading cart...</div>}
       {children}
     </CartContext.Provider>
   );

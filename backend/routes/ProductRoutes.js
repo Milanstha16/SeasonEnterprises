@@ -6,7 +6,7 @@ import Product from '../models/Product.js';
 
 const router = express.Router();
 
-const allowedCategories = ['Decor', 'Clothing', 'Jewelry', 'Books', 'Toys'];
+const allowedCategories = ['Bags', 'Meditation', 'Jewelry', 'Clothing', 'Home Decor', 'Scarves', 'Stones'];
 
 // Multer setup for image uploads
 const storage = multer.diskStorage({

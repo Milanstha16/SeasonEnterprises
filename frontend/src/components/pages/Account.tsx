@@ -1,6 +1,6 @@
 import { useAuth } from "@/components/context/AuthContext";
 import { useEffect, useState } from "react";
-import { Spinner } from "@/components/ui/Spinner"; // Assuming you have a spinner component for loading
+import { Spinner } from "@/components/ui/Spinner";
 
 type OrderItem = {
   _id: string;
@@ -24,6 +24,7 @@ const Account = () => {
   const [orders, setOrders] = useState<OrderItem[] | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -51,6 +52,35 @@ const Account = () => {
     fetchOrders();
   }, [token, API_BASE_URL]);
 
+  // Upload profile picture
+  const uploadProfilePicture = async (file: File) => {
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("profilePicture", file);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/profile-picture`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to upload profile picture");
+
+      const data = await res.json();
+
+      if (data.profilePicture) {
+        window.location.reload(); // Refresh to reflect new profile picture
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100">
@@ -61,15 +91,38 @@ const Account = () => {
 
   return (
     <main className="max-w-4xl mx-auto py-12 px-6 space-y-10 bg-gray-50">
+      {/* Profile Section */}
       <div className="bg-white rounded-lg shadow-lg p-8">
-        {/* Profile Section */}
         <div className="flex justify-center mb-8">
           <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200">
-            <img
-              src={user?.profilePicture || "/default-avatar.jpg"}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <label className="cursor-pointer relative group block w-full h-full">
+              <img
+                src={
+                  user?.profilePicture
+                    ? user.profilePicture.startsWith("http")
+                      ? user.profilePicture
+                      : `${API_BASE_URL}/Profiles/${user.profilePicture}`
+                    : "/default-avatar.jpg"
+                }
+                alt="Profile"
+                className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-80"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    uploadProfilePicture(file);
+                  }
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+              <div className="absolute bottom-0 w-full text-center bg-black bg-opacity-50 text-white text-sm py-1 hidden group-hover:block">
+                {uploading ? "Uploading..." : "Change"}
+              </div>
+            </label>
           </div>
         </div>
 
@@ -135,9 +188,18 @@ const Account = () => {
                   productId ? (
                     <div key={productId._id} className="flex items-center space-x-4">
                       <img
-                        src={productId.image || "/default-product.jpg"}
+                        src={
+                          productId.image
+                            ? productId.image.startsWith("http")
+                              ? productId.image
+                              : `${API_BASE_URL}/uploads/${productId.image}`
+                            : "/default-product.jpg"
+                        }
                         alt={productId.name}
                         className="w-20 h-20 object-cover rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.src = "/default-product.jpg";
+                        }}
                       />
                       <div className="flex flex-col">
                         <p className="font-semibold text-gray-800">{productId.name}</p>
@@ -147,7 +209,7 @@ const Account = () => {
                       </div>
                     </div>
                   ) : (
-                    <div key={Math.random()} className="text-red-500">
+                    <div key={`unavailable-${order._id}`} className="text-red-500">
                       <p>Product no longer available</p>
                     </div>
                   )

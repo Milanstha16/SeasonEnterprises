@@ -5,15 +5,27 @@ import { toast } from "@/components/hooks/use-toast";
 import { useCart } from "@/components/context/CartContext";
 import { useAuth } from "@/components/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 
-// Initialize Stripe with your public key
-const stripePromise = loadStripe('pk_test_51SH7TZCnCfQ1XzuSdNaOj13gAjPfFpGS577x52P92cIIsPdUBfhQ1wWWxFQNOz9iYP7jHxAp6J26tXCAFVP03GTl00y4IT7nJ6');
+// Initialize Stripe
+const stripePromise = loadStripe("pk_test_51SH7TZCnCfQ1XzuSdNaOj13gAjPfFpGS577x52P92cIIsPdUBfhQ1wWWxFQNOz9iYP7jHxAp6J26tXCAFVP03GTl00y4IT7nJ6");
 
 export default function CheckoutPage() {
-  const { items, clear, total } = useCart();
-  const { user, token } = useAuth(); // Assuming token is here
+  const {
+    items,
+    clear,
+    total,
+    update,
+    increaseQuantity,
+    decreaseQuantity,
+  } = useCart();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
 
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal">("stripe");
@@ -29,7 +41,6 @@ export default function CheckoutPage() {
   const stripe = useStripe();
   const elements = useElements();
 
-  // Redirect if user not logged in
   useEffect(() => {
     if (!user) {
       toast({ title: "Login required", description: "You must log in to checkout." });
@@ -43,7 +54,12 @@ export default function CheckoutPage() {
   };
 
   const validateOrderData = (orderData: any) => {
-    if (!orderData.userId || !orderData.items || orderData.items.length === 0 || !orderData.shipping) {
+    if (
+      !orderData.userId ||
+      !orderData.items ||
+      orderData.items.length === 0 ||
+      !orderData.shipping
+    ) {
       throw new Error("Missing required fields in the order data.");
     }
   };
@@ -68,7 +84,7 @@ export default function CheckoutPage() {
           name: i.name,
           quantity: i.quantity,
           priceAtPurchase: i.price,
-          stockAvailable: i.stockAvailable,  // <--- Added here to fix backend validation error
+          stockAvailable: i.stockAvailable,
         })),
         shipping: formData,
         paymentMethod,
@@ -76,20 +92,17 @@ export default function CheckoutPage() {
 
       validateOrderData(orderData);
 
-      console.log("Order data:", orderData);
-
       const response = await fetch("http://localhost:5000/api/orders/create", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,  // <-- Authorization header with token
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(orderData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Backend error:", errorData);
         throw new Error(`Failed to create order: ${errorData.message || response.statusText}`);
       }
 
@@ -103,13 +116,13 @@ export default function CheckoutPage() {
 
         const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
           payment_method: {
-            card: elements.getElement(CardElement),
+            card: elements.getElement(CardElement)!,
           },
         });
 
         if (error) {
           toast({ title: "Payment Failed", description: error.message });
-        } else if (paymentIntent?.status === 'succeeded') {
+        } else if (paymentIntent?.status === "succeeded") {
           toast({ title: "Payment Successful", description: "Your order has been placed!" });
           clear();
           navigate("/order-confirmation");
@@ -118,13 +131,10 @@ export default function CheckoutPage() {
         toast({ title: "PayPal", description: "Redirect to PayPal flow (not implemented)." });
       }
     } catch (err: any) {
-      if (err.message.includes("Failed to create order")) {
-        toast({ title: "Backend Error", description: "Could not create order. Please try again later." });
-      } else if (err.message.includes("Stripe not loaded")) {
-        toast({ title: "Payment Error", description: "Stripe payment failed. Please try again later." });
-      } else {
-        toast({ title: "Error", description: err.message || "Something went wrong." });
-      }
+      toast({
+        title: "Error",
+        description: err.message || "Something went wrong. Try again later.",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -198,15 +208,51 @@ export default function CheckoutPage() {
           </div>
         </div>
 
+        {/* Right Sidebar - Cart Summary */}
         <aside className="rounded-lg border p-4 h-fit">
           <h2 className="font-medium mb-2">Order Summary</h2>
+
           <ul className="text-sm mb-4">
-            {items.map((i) => (
-              <li key={i.id}>
-                {i.name} x {i.quantity} = ${(i.price * i.quantity).toFixed(2)}
+            {items.map((item) => (
+              <li key={item.id} className="mb-2 flex justify-between items-center">
+                <div>
+                  <div>{item.name}</div>
+                  <div className="text-xs text-gray-500">
+                    ${item.price.toFixed(2)} each
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="px-2 py-1 border rounded text-sm"
+                    onClick={() => decreaseQuantity(item.id)}
+                    disabled={item.quantity <= 1}
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center">{item.quantity}</span>
+                  <button
+                    type="button"
+                    className="px-2 py-1 border rounded text-sm"
+                    onClick={() => {
+                      if (item.quantity < item.stockAvailable) {
+                        increaseQuantity(item.id);
+                      } else {
+                        toast({
+                          title: "Stock limit reached",
+                          description: `Only ${item.stockAvailable} available`,
+                        });
+                      }
+                    }}
+                    disabled={item.quantity >= item.stockAvailable}
+                  >
+                    +
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
+
           <p className="font-semibold mb-4">Total: ${total.toFixed(2)}</p>
 
           {paymentMethod === "stripe" && (

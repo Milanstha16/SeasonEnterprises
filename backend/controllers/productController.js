@@ -1,6 +1,6 @@
 import Product from '../models/Product.js';
 
-const allowedCategories = ['Decor', 'Clothing', 'Jewelry', 'Books', 'Toys'];
+const allowedCategories = ['Bags', 'Meditation', 'Jewelry', 'Clothing', 'Home Decor', 'Scarves', 'Stones'];
 
 // Add a new product
 export const addProduct = async (req, res) => {
