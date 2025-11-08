@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import os from "os";
+import fs from "fs";
 
 // Routes
 import ProductRoutes from "./routes/ProductRoutes.js";
@@ -22,6 +23,10 @@ import paypal from "paypal-rest-sdk";
 
 // Load environment variables
 dotenv.config();
+
+// Fix __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Automatically set FRONTEND_URL if missing
 function getLocalIpAddress() {
@@ -45,9 +50,12 @@ if (!process.env.FRONTEND_URL) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Fix __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Ensure upload folders exist
+const uploadsDir = path.join(__dirname, "uploads");
+const profilesDir = path.join(__dirname, "Profiles");
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir, { recursive: true });
 
 // CORS setup
 app.use(cors({
@@ -55,8 +63,8 @@ app.use(cors({
     try {
       if (
         !origin ||
-        origin === "http://localhost:8080" || // frontend dev URL
-        /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) // local IPs with port
+        origin === "http://localhost:8080" ||
+        /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin)
       ) {
         return callback(null, true);
       }
@@ -65,15 +73,15 @@ app.use(cors({
       callback(err);
     }
   },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  // <-- PATCH added here
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 }));
 
-// Middleware to parse JSON and serve static uploads
+// Middleware
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use("/Profiles", express.static(path.join(__dirname, "Profiles")));
+app.use("/uploads", express.static(uploadsDir));
+app.use("/Profiles", express.static(profilesDir));
 
 // Routes
 app.use("/api/products", ProductRoutes);
@@ -83,14 +91,12 @@ app.use("/api/users", UserRoutes);
 app.use("/api/orders", OrderRoutes);
 app.use("/api/contact", ContactRoutes);
 app.use("/api/cart", CartRoutes);
-app.use("/api/payment/stripe", PaymentRoutes);
+app.use("/api/payment", PaymentRoutes);
 
-// Simple test route
-app.get("/", (req, res) => {
-  res.send("API is running!");
-});
+// Test route
+app.get("/", (req, res) => res.send("API is running!"));
 
-// Critical environment checks before starting services
+// Environment checks
 if (!process.env.MONGODB_URI) {
   console.error("❌ MONGODB_URI missing in environment");
   process.exit(1);
@@ -103,26 +109,23 @@ if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) {
   console.error("❌ PayPal credentials missing in environment");
   process.exit(1);
 }
-// Removed the exit on missing FRONTEND_URL since it’s now set automatically
 
-// Initialize Stripe and PayPal after env checks
+// Initialize Stripe & PayPal
 const stripeClient = Stripe(process.env.STRIPE_SECRET_KEY);
 
 paypal.configure({
-  mode: "sandbox", // change to 'live' for production
+  mode: "sandbox", // switch to 'live' for production
   client_id: process.env.PAYPAL_CLIENT_ID,
   client_secret: process.env.PAYPAL_SECRET,
 });
 
-// Connect to MongoDB and start server
+// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-  .then((conn) => {
-    console.log(`✅ MongoDB connected to database: ${conn.connection.name}`);
-    app.listen(PORT, () =>
-      console.log(`🚀 Server running on http://localhost:${PORT}`)
-    );
+  .then(conn => {
+    console.log(`✅ MongoDB connected: ${conn.connection.name}`);
+    app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
   })
-  .catch((err) => {
+  .catch(err => {
     console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);
   });
@@ -141,7 +144,7 @@ app.post("/api/payment/stripe", async (req, res) => {
             name: item.name,
             description: item.description,
           },
-          unit_amount: Math.round(item.price * 100), // Stripe expects integer cents
+          unit_amount: Math.round(item.price * 100),
         },
         quantity: item.quantity,
       })),
@@ -165,11 +168,8 @@ app.post("/api/payment/paypal", (req, res) => {
     intent: "sale",
     payer: { payment_method: "paypal" },
     transactions: [{
-      amount: {
-        currency,
-        total: amount.toString(),
-      },
-      description: "Your order description",
+      amount: { currency, total: amount.toString() },
+      description: "Your order",
       item_list: {
         items: items.map(item => ({
           name: item.name,
@@ -195,10 +195,10 @@ app.post("/api/payment/paypal", (req, res) => {
   });
 });
 
-// Global error handler (including multer errors etc)
+// Global error handler
 app.use((err, req, res, next) => {
-  console.error("Global error handler caught:", err);
-  if (err.name === "MulterError" || err.message === "Only image files are allowed") {
+  console.error("Global error:", err);
+  if (err.name === "MulterError" || err.message === "Only image files are allowed!") {
     return res.status(400).json({ msg: err.message });
   }
   res.status(err.status || 500).json({ msg: err.message || "Internal Server Error" });

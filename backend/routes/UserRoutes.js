@@ -1,111 +1,159 @@
-import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import User from '../models/User.js';
-import { protect, adminOnly } from '../middleware/authMiddleware.js';
+import express from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import User from "../models/User.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Multer setup for storing files locally in /Profiles folder
+/* -------------------------------------------------------------------------- */
+/*                              📁 Multer Setup                               */
+/* -------------------------------------------------------------------------- */
+
+const uploadDir = path.join("Profiles");
+
+// Ensure the Profiles folder exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log("✅ Created Profiles folder");
+}
+
+// Multer storage configuration
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'Profiles/'); // Ensure this folder exists in your project root
-  },
+  destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, req.user.id + '-' + Date.now() + ext);
+    cb(null, `${req.user.id}-${Date.now()}${ext}`);
   },
 });
 
 const upload = multer({
   storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed!'));
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("Only image files are allowed!"));
     }
     cb(null, true);
   },
 });
 
+/* -------------------------------------------------------------------------- */
+/*                             👥 User Endpoints                              */
+/* -------------------------------------------------------------------------- */
+
 // GET all users (admin only)
-router.get('/', protect, adminOnly, async (req, res) => {
+router.get("/", protect, adminOnly, async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find().select("-password");
     res.json({ users });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
-// GET user by ID (protected, user or admin)
-router.get('/:id', protect, async (req, res) => {
+// GET user by ID (protected)
+router.get("/:id", protect, async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
-      return res.status(403).json({ error: 'Access denied' });
+    if (req.user.role !== "admin" && req.user.id !== req.params.id) {
+      return res.status(403).json({ error: "Access denied" });
     }
 
     res.json(user);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    res.status(500).json({ error: "Failed to fetch user" });
   }
 });
 
-// PATCH - Update profile picture (authenticated user only)
-router.patch('/profile-picture', protect, upload.single('profilePicture'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+/* -------------------------------------------------------------------------- */
+/*                   🖼️ PATCH - Upload or Update Profile Picture              */
+/* -------------------------------------------------------------------------- */
+router.patch(
+  "/profile-picture",
+  protect,
+  upload.single("profilePicture"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
 
-    const filename = req.file.filename;
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ error: "User not found" });
 
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    // Delete old profile picture if it exists and is not default
-    if (user.profilePicture && !user.profilePicture.includes('default-avatar.jpg')) {
-      const oldFilePath = path.join('Profiles', user.profilePicture);
-      fs.unlink(oldFilePath, (err) => {
-        if (err) {
-          console.warn('Failed to delete old profile picture:', err.message);
-        } else {
-          console.log('Deleted old profile picture:', oldFilePath);
+      // Delete old profile picture if exists and not default
+      if (
+        user.profilePicture &&
+        !user.profilePicture.includes("default-avatar.jpg")
+      ) {
+        try {
+          const oldFilename = path.basename(user.profilePicture);
+          const oldPath = path.join(uploadDir, oldFilename);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        } catch (err) {
+          console.warn("⚠️ Failed to delete old profile:", err.message);
         }
+      }
+
+      const imageUrl = `${req.protocol}://${req.get("host")}/Profiles/${req.file.filename}`;
+      user.profilePicture = imageUrl;
+      await user.save();
+
+      console.log(`✅ User ${user.id} updated profile picture: ${req.file.filename}`);
+
+      res.json({
+        message: "Profile picture updated successfully",
+        profilePicture: imageUrl,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          profilePicture: imageUrl,
+        },
       });
+    } catch (err) {
+      console.error("Error updating profile picture:", err);
+      res.status(500).json({ error: "Failed to update profile picture" });
     }
-
-  user.profilePicture = req.file.filename;
-    await user.save();
-
-    console.log(`User ${user.id} updated profile picture: ${req.file.filename}`);
-    res.json({ message: 'Profile picture updated', profilePicture: req.file.filename });
-  } catch (err) {
-    console.error('Error updating profile picture:', err);
-    res.status(500).json({ error: 'Failed to update profile picture' });
   }
-});
+);
 
-// DELETE user by ID (admin only)
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+/* -------------------------------------------------------------------------- */
+/*                           ❌ DELETE User (Admin)                            */
+/* -------------------------------------------------------------------------- */
+router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
     if (req.user.id === req.params.id) {
-      return res.status(400).json({ error: 'You cannot delete your own account' });
+      return res
+        .status(400)
+        .json({ error: "You cannot delete your own account" });
     }
 
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Delete profile picture if exists
+    if (
+      user.profilePicture &&
+      !user.profilePicture.includes("default-avatar.jpg")
+    ) {
+      const oldFilename = path.basename(user.profilePicture);
+      const oldPath = path.join(uploadDir, oldFilename);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
 
     await user.deleteOne();
-    res.json({ message: 'User deleted successfully' });
+    res.json({ message: "User deleted successfully" });
   } catch (err) {
-    console.error('Delete user error:', err);
-    res.status(500).json({ error: err.message || 'Failed to delete user' });
+    console.error("Delete user error:", err);
+    res.status(500).json({ error: err.message || "Failed to delete user" });
   }
 });
 

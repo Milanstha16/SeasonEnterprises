@@ -20,7 +20,7 @@ type OrderItem = {
 };
 
 const Account = () => {
-  const { user, token } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const [orders, setOrders] = useState<OrderItem[] | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,22 +28,25 @@ const Account = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
+  // -------------------- Fetch Orders --------------------
   useEffect(() => {
     if (!token) return;
 
     const fetchOrders = async () => {
       setLoadingOrders(true);
+      setError(null);
       try {
         const res = await fetch(`${API_BASE_URL}/api/orders/my-orders`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
+
         if (!res.ok) throw new Error("Failed to fetch orders");
-        const data = await res.json();
+
+        const data: OrderItem[] = await res.json();
         setOrders(data);
       } catch (err: any) {
-        setError(err.message || "Something went wrong");
+        console.error("Order fetch error:", err);
+        setError(err.message || "Something went wrong while fetching orders");
       } finally {
         setLoadingOrders(false);
       }
@@ -52,8 +55,10 @@ const Account = () => {
     fetchOrders();
   }, [token, API_BASE_URL]);
 
-  // Upload profile picture
+  // -------------------- Upload Profile Picture --------------------
   const uploadProfilePicture = async (file: File) => {
+    if (!token) return alert("You must be logged in to upload a profile picture.");
+
     setUploading(true);
     const formData = new FormData();
     formData.append("profilePicture", file);
@@ -61,83 +66,78 @@ const Account = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/users/profile-picture`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
       if (!res.ok) throw new Error("Failed to upload profile picture");
 
       const data = await res.json();
-
-      if (data.profilePicture) {
-        window.location.reload(); // Refresh to reflect new profile picture
+      if (data.user) {
+        updateUser({
+          profilePicture: data.profilePicture,
+          ...data.user,
+        });
+      } else if (data.profilePicture) {
+        updateUser({ profilePicture: data.profilePicture });
       }
     } catch (err: any) {
-      console.error("Upload error:", err.message);
+      console.error("Profile upload error:", err.message);
+      alert("Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
   };
 
+  // -------------------- Loading State --------------------
   if (!user) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100">
-        <p className="text-xl font-semibold text-gray-700">Loading profile...</p>
+        <Spinner />
+        <p className="ml-3 text-xl font-semibold text-gray-700">Loading profile...</p>
       </div>
     );
   }
 
+  // -------------------- Main Profile & Orders --------------------
   return (
     <main className="max-w-4xl mx-auto py-12 px-6 space-y-10 bg-gray-50">
       {/* Profile Section */}
       <div className="bg-white rounded-lg shadow-lg p-8">
         <div className="flex justify-center mb-8">
-          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200">
-            <label className="cursor-pointer relative group block w-full h-full">
-              <img
-                src={
-                  user?.profilePicture
-                    ? user.profilePicture.startsWith("http")
-                      ? user.profilePicture
-                      : `${API_BASE_URL}/Profiles/${user.profilePicture}`
-                    : "/default-avatar.jpg"
-                }
-                alt="Profile"
-                className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-80"
-              />
-              <input
-                type="file"
-                accept="image/*"
-                disabled={uploading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    uploadProfilePicture(file);
-                  }
-                }}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              <div className="absolute bottom-0 w-full text-center bg-black bg-opacity-50 text-white text-sm py-1 hidden group-hover:block">
-                {uploading ? "Uploading..." : "Change"}
-              </div>
-            </label>
+          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 relative group">
+            <img
+              src={user.profilePicture ?? "/default-avatar.jpg"}
+              alt="Profile"
+              className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-80"
+              onError={(e) => (e.currentTarget.src = "/default-avatar.jpg")}
+            />
+            <input
+              type="file"
+              accept="image/*"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadProfilePicture(file);
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+            />
+            <div className="absolute bottom-0 w-full text-center bg-black bg-opacity-50 text-white text-sm py-1 hidden group-hover:block">
+              {uploading ? "Uploading..." : "Change"}
+            </div>
           </div>
         </div>
 
-        <h1 className="text-3xl font-semibold text-center text-gray-800 mb-6">
-          {user?.name}
-        </h1>
+        <h1 className="text-3xl font-semibold text-center text-gray-800 mb-6">{user.name}</h1>
 
-        <div className="space-y-4">
+        <div className="space-y-4 text-center sm:text-left">
           <div className="flex justify-between items-center">
             <strong className="text-gray-700">Email:</strong>
-            <span className="text-gray-900">{user?.email}</span>
+            <span className="text-gray-900">{user.email}</span>
           </div>
           <div className="flex justify-between items-center">
             <strong className="text-gray-700">User ID:</strong>
-            <span className="text-gray-900">{user?.id}</span>
+            <span className="text-gray-900">{user.id}</span>
           </div>
         </div>
       </div>
@@ -148,7 +148,6 @@ const Account = () => {
 
         {loadingOrders && <Spinner />}
         {error && <p className="text-red-500">{error}</p>}
-
         {!loadingOrders && !error && orders?.length === 0 && (
           <p className="text-gray-600">You haven't placed any orders yet.</p>
         )}
@@ -184,22 +183,18 @@ const Account = () => {
               </div>
 
               <div className="space-y-4">
-                {order.items.map(({ productId, quantity, priceAtPurchase }) =>
+                {order.items.map(({ productId, quantity, priceAtPurchase }, idx) =>
                   productId ? (
                     <div key={productId._id} className="flex items-center space-x-4">
                       <img
                         src={
-                          productId.image
-                            ? productId.image.startsWith("http")
-                              ? productId.image
-                              : `${API_BASE_URL}/uploads/${productId.image}`
-                            : "/default-product.jpg"
+                          productId.image.startsWith("http")
+                            ? productId.image
+                            : `${API_BASE_URL}/uploads/${productId.image}`
                         }
                         alt={productId.name}
                         className="w-20 h-20 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.currentTarget.src = "/default-product.jpg";
-                        }}
+                        onError={(e) => (e.currentTarget.src = "/default-product.jpg")}
                       />
                       <div className="flex flex-col">
                         <p className="font-semibold text-gray-800">{productId.name}</p>
@@ -209,8 +204,8 @@ const Account = () => {
                       </div>
                     </div>
                   ) : (
-                    <div key={`unavailable-${order._id}`} className="text-red-500">
-                      <p>Product no longer available</p>
+                    <div key={`unavailable-${idx}`} className="text-red-500">
+                      Product no longer available
                     </div>
                   )
                 )}
