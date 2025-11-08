@@ -24,11 +24,19 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export default function Shop() {
   const navigate = useNavigate();
-  const { add, clear } = useCart(); // ✅ Access cart methods
+  const { add, clear } = useCart();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // ✅ Helper to get correct image URL
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return "/default-image.jpg"; // fallback
+    if (imagePath.startsWith("http")) return imagePath; // already full URL
+    if (imagePath.startsWith("uploads")) return `${API_BASE}/${imagePath}`;
+    return `${API_BASE}/uploads/${imagePath}`;
+  };
 
   // ✅ Fetch products from backend
   useEffect(() => {
@@ -44,7 +52,6 @@ export default function Shop() {
         });
       }
     };
-
     fetchProducts();
   }, []);
 
@@ -54,7 +61,7 @@ export default function Shop() {
       id: product._id,
       name: product.name,
       price: product.price,
-      image: `${API_BASE}/uploads/${product.image}`,
+      image: getImageUrl(product.image),
       stockAvailable: product.stock ?? 0,
     });
 
@@ -64,14 +71,14 @@ export default function Shop() {
     });
   };
 
-  // ✅ Buy Now Logic
+  // ✅ Buy Now
   const handleBuyNow = (product: Product) => {
     clear();
     add({
       id: product._id,
       name: product.name,
       price: product.price,
-      image: `${API_BASE}/uploads/${product.image}`,
+      image: getImageUrl(product.image),
       stockAvailable: product.stock ?? 0,
     });
 
@@ -139,7 +146,7 @@ export default function Shop() {
                 transition={{ duration: 0.4 }}
               >
                 <img
-                  src={`${API_BASE}/uploads/${product.image}`}
+                  src={getImageUrl(product.image)}
                   alt={product.name}
                   className="w-full h-64 object-cover"
                 />
