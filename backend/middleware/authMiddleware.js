@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 
+// ------------------- Protect Routes -------------------
 export const protect = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -10,6 +11,10 @@ export const protect = (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded || !decoded.id) {
+      return res.status(401).json({ msg: "Invalid token payload" });
+    }
 
     if (process.env.NODE_ENV === "development") {
       console.log("Decoded JWT:", decoded);
@@ -28,6 +33,7 @@ export const protect = (req, res, next) => {
   }
 };
 
+// ------------------- Admin-Only Access -------------------
 export const adminOnly = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ msg: "Unauthorized: No user info found" });

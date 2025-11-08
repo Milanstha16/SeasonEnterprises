@@ -80,8 +80,8 @@ app.use(cors({
 
 // Middleware
 app.use(express.json());
-app.use("/uploads", express.static(uploadsDir));
-app.use("/Profiles", express.static(profilesDir));
+app.use("/uploads", express.static(uploadsDir));  // Serve static files from "uploads"
+app.use("/Profiles", express.static(profilesDir));  // Serve profile pictures
 
 // Routes
 app.use("/api/products", ProductRoutes);
@@ -121,11 +121,11 @@ paypal.configure({
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-  .then(conn => {
-    console.log(`✅ MongoDB connected: ${conn.connection.name}`);
+  .then(() => {
+    console.log(`✅ MongoDB connected`);
     app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
   })
-  .catch(err => {
+  .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);
   });

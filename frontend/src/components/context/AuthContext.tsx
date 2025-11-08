@@ -33,8 +33,15 @@ const loadFromStorage = <T,>(key: string): T | null => {
   try {
     return JSON.parse(item) as T;
   } catch {
+    console.error(`Error parsing ${key} from localStorage`);
     return null;
   }
+};
+
+// Fix: match the actual backend path for uploaded profile pictures
+const normalizeProfilePicture = (url: string | undefined | null, baseUrl: string) => {
+  if (!url) return null;
+  return url.startsWith("http") ? url : `${baseUrl}/uploads/${url}`;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -44,21 +51,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  // Load initial state from localStorage
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+
+  /* ------------------------ Load from localStorage ------------------------ */
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
     const savedUser = loadFromStorage<User>("user");
+
     if (savedToken && savedUser) {
       setToken(savedToken);
-      setUser(savedUser);
+      setUser({
+        ...savedUser,
+        profilePicture: normalizeProfilePicture(savedUser.profilePicture, API_BASE_URL),
+      });
     }
-  }, []);
+  }, [API_BASE_URL]);
 
-  // Cross-tab sync
+  /* ---------------------------- Cross-tab sync ---------------------------- */
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "token") setToken(e.newValue);
-      if (e.key === "user") setUser(e.newValue ? JSON.parse(e.newValue) : null);
+      if (e.key === "user") {
+        const updatedUser = e.newValue ? JSON.parse(e.newValue) : null;
+        setUser(
+          updatedUser
+            ? { ...updatedUser, profilePicture: normalizeProfilePicture(updatedUser.profilePicture, API_BASE_URL) }
+            : null
+        );
+      }
       if (e.key === null) {
         setToken(null);
         setUser(null);
@@ -66,19 +86,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [API_BASE_URL]);
 
-  /* -------------------------------------------------------------------------- */
-  /*                          🔑 Login / Logout Logic                           */
-  /* -------------------------------------------------------------------------- */
+  /* ---------------------------- Login / Logout ---------------------------- */
   const login = (token: string, user: User) => {
     const normalizedUser: User = {
       ...user,
-      profilePicture: user.profilePicture ?? null,
+      profilePicture: normalizeProfilePicture(user.profilePicture, API_BASE_URL),
     };
 
     setToken(token);
     setUser(normalizedUser);
+
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(normalizedUser));
   };
@@ -90,28 +109,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("user");
   };
 
-  /* -------------------------------------------------------------------------- */
-  /*                        🔄 Update User Information                           */
-  /* -------------------------------------------------------------------------- */
+  /* ---------------------------- Update User ---------------------------- */
   const updateUser = (updates: Partial<User>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const updatedUser = { ...prev, ...updates };
+
+      const updatedUser: User = {
+        ...prev,
+        ...updates,
+        profilePicture: normalizeProfilePicture(updates.profilePicture ?? prev.profilePicture, API_BASE_URL),
+      };
+
       localStorage.setItem("user", JSON.stringify(updatedUser));
       return updatedUser;
     });
   };
 
-  /* -------------------------------------------------------------------------- */
-  /*                               💡 Memoized Value                            */
-  /* -------------------------------------------------------------------------- */
   const value = useMemo(() => ({ user, token, login, logout, updateUser }), [user, token]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 /* -------------------------------------------------------------------------- */
-/*                          🪄 Custom Access Hooks                              */
+/*                          🪄 Custom Hooks                                   */
 /* -------------------------------------------------------------------------- */
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
