@@ -1,156 +1,125 @@
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 
-// Utility to build full image URL
+// Helper: build full image URL
 const buildImageUrl = (imagePath) => {
-  if (!imagePath) return "/default-image.jpg"; // optional fallback image
+  if (!imagePath) return "/default-image.jpg";
   if (imagePath.startsWith("http")) return imagePath;
-  if (imagePath.startsWith("uploads")) return `${process.env.BASE_URL}/${imagePath}`;
   return `${process.env.BASE_URL}/uploads/${imagePath}`;
 };
 
-// Get the current user's cart
+// GET /api/cart
 export const getCart = async (req, res) => {
   try {
     const cart = await Cart.findOne({ userId: req.user.id }).populate({
       path: "items.productId",
-      select: "name price image stockAvailable", // Added stockAvailable here
+      select: "name price image stockAvailable",
     });
 
     if (!cart) return res.json({ items: [], totalPrice: 0 });
 
-    const filteredItems = cart.items.filter((item) => item.productId);
+    const filteredItems = cart.items.filter(item => item.productId);
 
-    const totalPrice = filteredItems.reduce(
-      (total, item) =>
-        total + (item.totalPrice ?? item.quantity * item.productId.price),
-      0
-    );
+    const responseItems = filteredItems.map(item => ({
+      id: item.productId._id,
+      name: item.productId.name,
+      price: item.price,
+      image: buildImageUrl(item.productId.image),
+      quantity: item.quantity,
+      totalPrice: item.totalPrice,
+      stockAvailable: item.productId.stockAvailable,
+    }));
 
-    const responseItems = filteredItems.map((item) => {
-      const product = item.productId;
-      return {
-        id: product._id,
-        name: product.name,
-        price: item.price ?? product.price,
-        image: buildImageUrl(product.image),
-        quantity: item.quantity,
-        totalPrice:
-          item.totalPrice ??
-          item.quantity * (item.price ?? product.price),
-        stockAvailable: product.stockAvailable, // Added here
-      };
-    });
-
-    res.json({ items: responseItems, totalPrice });
+    res.json({ items: responseItems, totalPrice: cart.totalPrice });
   } catch (err) {
-    console.error("Error fetching cart:", err.message, err.stack);
+    console.error("Error fetching cart:", err);
     res.status(500).json({ msg: "Server error" });
   }
 };
 
-// Add or update item in cart
+// POST /api/cart
 export const addToCart = async (req, res) => {
   const { items } = req.body;
 
-  if (!Array.isArray(items) || items.length === 0) {
+  if (!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ msg: "Invalid cart data" });
-  }
 
   try {
-    const validItems = [];
+    let cart = await Cart.findOne({ userId: req.user.id });
 
+    // Map valid items with stock check
+    const validItems = [];
     for (const item of items) {
       if (!item.productId) continue;
 
       const product = await Product.findById(item.productId);
       if (!product) continue;
 
-      const quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
-      const price = product.price;
-
+      const quantity = Math.min(item.quantity || 1, product.stockAvailable);
       validItems.push({
-        productId: item.productId,
+        productId: product._id,
         quantity,
-        price,
-        totalPrice: price * quantity,
+        price: product.price,
+        totalPrice: product.price * quantity,
         variant: item.variant || undefined,
       });
     }
 
-    if (validItems.length === 0) {
-      return res.status(400).json({ msg: "No valid items found" });
-    }
-
-    let cart = await Cart.findOne({ userId: req.user.id });
+    if (validItems.length === 0) return res.status(400).json({ msg: "No valid items" });
 
     if (!cart) {
       cart = new Cart({ userId: req.user.id, items: validItems });
     } else {
+      // Replace cart items with new array
       cart.items = validItems;
     }
 
     await cart.save();
 
-    const updatedCart = await Cart.findOne({ userId: req.user.id }).populate({
+    // Populate for frontend
+    const populatedCart = await cart.populate({
       path: "items.productId",
-      select: "name price image stockAvailable", // Added stockAvailable here
+      select: "name price image stockAvailable",
     });
 
-    const filteredItems = updatedCart.items.filter((item) => item.productId);
+    const responseItems = populatedCart.items.map(item => ({
+      id: item.productId._id,
+      name: item.productId.name,
+      price: item.price,
+      image: buildImageUrl(item.productId.image),
+      quantity: item.quantity,
+      totalPrice: item.totalPrice,
+      stockAvailable: item.productId.stockAvailable,
+    }));
 
-    const totalPrice = filteredItems.reduce(
-      (total, item) => total + item.totalPrice,
-      0
-    );
-
-    const responseItems = filteredItems.map((item) => {
-      const product = item.productId;
-      return {
-        id: product._id,
-        name: product.name,
-        price: item.price,
-        image: buildImageUrl(product.image),
-        quantity: item.quantity,
-        totalPrice: item.totalPrice,
-        stockAvailable: product.stockAvailable, // Added here
-      };
-    });
-
-    res.json({ items: responseItems, totalPrice });
+    res.json({ items: responseItems, totalPrice: populatedCart.totalPrice });
   } catch (err) {
-    console.error("Error syncing cart:", err.message, err.stack);
+    console.error("Error syncing cart:", err);
     res.status(500).json({ msg: "Server error" });
   }
 };
 
-// Remove item from cart
+// DELETE /api/cart/:productId
 export const removeFromCart = async (req, res) => {
   const { productId } = req.params;
-
   try {
     const cart = await Cart.findOne({ userId: req.user.id });
-
     if (!cart) return res.status(404).json({ msg: "Cart not found" });
 
-    cart.items = cart.items.filter(
-      (item) => item.productId.toString() !== productId
-    );
-
+    cart.items = cart.items.filter(item => item.productId.toString() !== productId);
     await cart.save();
 
-    res.json({ msg: "Item removed" });
+    res.json({ msg: "Item removed", items: cart.items, totalPrice: cart.totalPrice });
   } catch (err) {
-    console.error("Error removing item:", err.message, err.stack);
+    console.error("Error removing item:", err);
     res.status(500).json({ msg: "Server error" });
   }
 };
 
-// Clear all items from the cart
+// DELETE /api/cart/clear
 export const clearCart = async (req, res) => {
   try {
     const cart = await Cart.findOne({ userId: req.user.id });
-
     if (!cart) return res.status(404).json({ msg: "Cart not found" });
 
     cart.items = [];
@@ -158,7 +127,7 @@ export const clearCart = async (req, res) => {
 
     res.json({ msg: "Cart cleared", items: [], totalPrice: 0 });
   } catch (err) {
-    console.error("Error clearing cart:", err.message, err.stack);
+    console.error("Error clearing cart:", err);
     res.status(500).json({ msg: "Server error" });
   }
 };

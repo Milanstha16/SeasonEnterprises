@@ -5,29 +5,31 @@ import { Helmet } from "react-helmet-async";
 
 export default function CartPage() {
   const { items, total, update, remove, clear } = useCart();
-
-  // Check if the cart is empty
   const isCartEmpty = items.length === 0;
 
   return (
     <main className="container py-10">
       <Helmet>
         <title>Cart | Season Enterprises</title>
-        <meta name="description" content="Review your cart and proceed to secure checkout." />
+        <meta
+          name="description"
+          content="Review your cart and proceed to secure checkout."
+        />
         <link rel="canonical" href="/cart" />
       </Helmet>
 
       <h1 className="font-display text-3xl mb-6">Your Cart</h1>
 
       {isCartEmpty ? (
-        <div>
+        <div className="text-center py-10">
           <p className="text-muted-foreground">Your cart is empty.</p>
-          <Link to="/shop" aria-label="Continue shopping">
+          <Link to="/shop">
             <Button className="mt-4">Continue Shopping</Button>
           </Link>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-3">
+          {/* Cart Items */}
           <div className="md:col-span-2 space-y-4">
             {items.map((item) => (
               <div
@@ -35,7 +37,7 @@ export default function CartPage() {
                 className="flex items-center gap-4 rounded-md border p-3"
               >
                 <img
-                  src={item.image}
+                  src={item.image || "/default-image.jpg"}
                   alt={item.name}
                   className="h-16 w-16 rounded object-cover"
                   loading="lazy"
@@ -47,27 +49,30 @@ export default function CartPage() {
                   <div className="text-sm text-muted-foreground">
                     ${(item.price * item.quantity).toFixed(2)}
                   </div>
+                  {item.variant && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Variant: {item.variant}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor={`quantity-${item.id}`} className="sr-only">
-                    Quantity for {item.name}
-                  </label>
+                <div className="flex flex-col items-end gap-2">
                   <input
-                    id={`quantity-${item.id}`}
-                    aria-label={`Quantity for ${item.name}`}
-                    className="w-16 rounded border bg-background px-2 py-1 text-center"
                     type="number"
                     min={1}
+                    max={item.stockAvailable}
                     value={item.quantity}
+                    aria-label={`Quantity for ${item.name}`}
+                    className="w-16 rounded border bg-background px-2 py-1 text-center"
                     onChange={(e) =>
-                      update(item.id, Math.max(1, Number(e.target.value)))
+                      update(item.id, Math.min(Math.max(1, Number(e.target.value)), item.stockAvailable))
                     }
                     onBlur={(e) =>
-                      update(item.id, Math.max(1, Number(e.target.value) || 1))
+                      update(item.id, Math.min(Math.max(1, Number(e.target.value) || 1), item.stockAvailable))
                     }
                   />
                   <Button
                     variant="ghost"
+                    size="sm"
                     aria-label={`Remove ${item.name} from cart`}
                     onClick={() => remove(item.id)}
                   >
@@ -77,20 +82,16 @@ export default function CartPage() {
               </div>
             ))}
 
-            <Button
-              variant="outline"
-              onClick={clear}
-              className="mt-4"
-              aria-label="Clear all items from cart"
-            >
+            <Button variant="outline" onClick={clear} className="mt-4">
               Clear Cart
             </Button>
           </div>
 
+          {/* Cart Summary */}
           <aside className="rounded-lg border p-4 h-fit">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between text-lg font-medium">
               <span>Subtotal</span>
-              <span className="font-semibold">${total.toFixed(2)}</span>
+              <span>${total.toFixed(2)}</span>
             </div>
             <p className="text-sm text-muted-foreground mt-2">
               Taxes and shipping calculated at checkout.
@@ -98,9 +99,8 @@ export default function CartPage() {
             <Link to="/checkout">
               <Button
                 className="mt-4 w-full"
-                disabled={isCartEmpty} // Disable checkout if the cart is empty
+                disabled={isCartEmpty}
                 aria-disabled={isCartEmpty}
-                aria-label="Proceed to checkout"
               >
                 Proceed to Checkout
               </Button>

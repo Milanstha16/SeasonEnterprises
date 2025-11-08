@@ -3,12 +3,13 @@ import { useAuth } from "./AuthContext";
 
 // Types
 export type CartItem = {
-  id: string;
+  id: string; // matches Product._id from backend
   name: string;
   price: number;
   image: string;
   quantity: number;
   stockAvailable: number;
+  variant?: string;
 };
 
 interface CartContextValue {
@@ -45,7 +46,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [initialLoading, setInitialLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🛒 Fetch cart on login
+  // Fetch cart on login
   useEffect(() => {
     if (!token) {
       setItems([]);
@@ -64,24 +65,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const data = await res.json();
 
-        const mappedItems: CartItem[] = (data.items ?? []).map((item: any) => {
-          const product = item.productId ?? {};
-          const imagePath = item.image || product.image || "";
-          const imageUrl = imagePath.startsWith("http")
-            ? imagePath
-            : imagePath
-            ? `${API_BASE_URL}/${imagePath}`
-            : "/default-image.jpg";
-
-          return {
-            id: item.id ?? product._id ?? "",
-            name: item.name ?? product.name ?? "Unknown Product",
-            price: item.price ?? product.price ?? 0,
-            image: imageUrl,
-            quantity: item.quantity ?? 1,
-            stockAvailable: product.stockAvailable ?? 0,
-          };
-        });
+        const mappedItems: CartItem[] = (data.items ?? []).map((item: any) => ({
+          id: item.id ?? item.productId?._id ?? "",
+          name: item.name ?? item.productId?.name ?? "Unknown Product",
+          price: item.price ?? item.productId?.price ?? 0,
+          image: item.image
+            ? item.image.startsWith("http")
+              ? item.image
+              : `${API_BASE_URL}/${item.image}`
+            : item.productId?.image
+            ? `${API_BASE_URL}/${item.productId.image}`
+            : "/default-image.jpg",
+          quantity: item.quantity ?? 1,
+          stockAvailable: item.stockAvailable ?? item.productId?.stockAvailable ?? 0,
+          variant: item.variant ?? "",
+        }));
 
         setItems(mappedItems);
       } catch (err) {
@@ -96,7 +94,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     fetchCart();
   }, [token]);
 
-  // 🔁 Sync cart to backend
+  // Sync cart to backend
   const syncCartWithBackend = async (updatedItems: CartItem[]) => {
     if (!token) return;
 
@@ -108,6 +106,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           productId: item.id,
           quantity: item.quantity,
           price: item.price,
+          variant: item.variant || "",
         })),
       };
 
@@ -121,7 +120,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.msg || "Failed syncing cart with backend");
       }
     } catch (err) {
@@ -130,37 +129,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Debounced version to avoid flooding backend on rapid changes
   const debouncedSyncCart = useMemo(() => debounce(syncCartWithBackend, 400), [token]);
 
-  // ➕ Add item to cart
+  // Add item
   const add: CartContextValue["add"] = (item, qty = 1) => {
     setItems((prev) => {
-      const found = prev.find((p) => p.id === item.id);
-      const newItems = found
+      const existing = prev.find((p) => p.id === item.id);
+      const newItems = existing
         ? prev.map((p) =>
             p.id === item.id
-              ? {
-                  ...p,
-                  quantity: Math.min(p.quantity + qty, item.stockAvailable),
-                }
+              ? { ...p, quantity: Math.min(p.quantity + qty, p.stockAvailable) }
               : p
           )
-        : [
-            ...prev,
-            {
-              ...item,
-              quantity: Math.min(qty, item.stockAvailable),
-              stockAvailable: item.stockAvailable ?? 0,
-            },
-          ];
-
+        : [...prev, { ...item, quantity: Math.min(qty, item.stockAvailable) }];
       debouncedSyncCart(newItems);
       return newItems;
     });
   };
 
-  // ❌ Remove item from cart
+  // Remove item
   const remove: CartContextValue["remove"] = (id) => {
     setItems((prev) => {
       const newItems = prev.filter((p) => p.id !== id);
@@ -169,45 +156,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // 🔁 Update quantity
+  // Update quantity
   const update: CartContextValue["update"] = (id, qty) => {
     setItems((prev) => {
       const newItems = prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              quantity: Math.min(qty, p.stockAvailable),
-            }
-          : p
+        p.id === id ? { ...p, quantity: Math.min(qty, p.stockAvailable) } : p
       );
       debouncedSyncCart(newItems);
       return newItems;
     });
   };
 
-  // 🔼 Increase quantity
+  // Increase quantity
   const increaseQuantity: CartContextValue["increaseQuantity"] = (id) => {
     const item = items.find((i) => i.id === id);
-    if (!item) return;
-    if (item.quantity >= item.stockAvailable) return;
-
+    if (!item || item.quantity >= item.stockAvailable) return;
     update(id, item.quantity + 1);
   };
 
-  // 🔽 Decrease quantity
+  // Decrease quantity
   const decreaseQuantity: CartContextValue["decreaseQuantity"] = (id) => {
     const item = items.find((i) => i.id === id);
     if (!item) return;
-
     const newQty = item.quantity - 1;
-    if (newQty <= 0) {
-      remove(id);
-    } else {
-      update(id, newQty);
-    }
+    if (newQty <= 0) remove(id);
+    else update(id, newQty);
   };
 
-  // 🧹 Clear cart
+  // Clear cart
   const clear = () => {
     setItems([]);
     if (!token) return;
@@ -221,7 +197,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // 🧮 Count and total
   const count = items.reduce((a, b) => a + b.quantity, 0);
   const total = items.reduce((a, b) => a + b.price * b.quantity, 0);
 

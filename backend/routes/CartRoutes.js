@@ -4,13 +4,11 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Apply authentication middleware to all cart routes
 router.use(protect);
 
-// Routes
-router.get("/", getCart);                    // GET /api/cart
-router.post("/", addToCart);                 // POST /api/cart
-router.delete("/clear", clearCart);          // DELETE /api/cart/clear
-router.delete("/:productId", removeFromCart); // DELETE /api/cart/:productId
+router.get("/", getCart);
+router.post("/", addToCart);
+router.delete("/clear", clearCart);
+router.delete("/:productId", removeFromCart);
 
 export default router;
