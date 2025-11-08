@@ -40,12 +40,15 @@ const PORT = process.env.PORT || 5000;
 // --------------------
 // CORS setup
 // --------------------
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8080";
+// Read allowed frontend URLs from environment variable, comma-separated
+const FRONTEND_URLS = (process.env.FRONTEND_URLS || "http://localhost:8080,https://season-enterprises.vercel.app")
+  .split(",")
+  .map(url => url.trim());
 
 app.use(cors({
   origin: (origin, callback) => {
-    // allow local frontend or deployed frontend
-    if (!origin || origin === FRONTEND_URL) {
+    // Allow requests with no origin (like Postman) or if origin is in allowed list
+    if (!origin || FRONTEND_URLS.includes(origin)) {
       return callback(null, true);
     }
     callback(new Error(`Not allowed by CORS: ${origin}`));
