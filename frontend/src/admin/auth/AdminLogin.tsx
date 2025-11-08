@@ -24,7 +24,7 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/admin/login", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -32,14 +32,13 @@ export default function AdminLogin() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.msg || "Login failed");
-      }
+      if (!res.ok) throw new Error(data.msg || "Login failed");
 
       const { token, user } = data;
 
       if (user.role !== "admin") {
         setError("Access denied: Admins only");
+        setLoading(false);
         return;
       }
 
@@ -47,7 +46,7 @@ export default function AdminLogin() {
       login(token, user);
 
       // ✅ Redirect to admin dashboard
-      return navigate("/admin");
+      navigate("/admin");
     } catch (err: any) {
       console.error("Login error:", err);
       setError(err.message || "An error occurred during login");
@@ -72,13 +71,19 @@ export default function AdminLogin() {
         </div>
 
         {error && (
-          <div className="p-3 mb-4 text-sm font-semibold text-center text-red-600 bg-red-100 border border-red-200 rounded-lg">
+          <div
+            role="alert"
+            className="p-3 mb-4 text-sm font-semibold text-center text-red-600 bg-red-100 border border-red-200 rounded-lg"
+          >
             {error}
           </div>
         )}
 
-        <label className="block mb-2 text-sm font-medium text-gray-700">Email</label>
+        <label htmlFor="admin-email" className="block mb-2 text-sm font-medium text-gray-700">
+          Email
+        </label>
         <input
+          id="admin-email"
           type="email"
           placeholder="admin email"
           className="w-full p-3 mb-4 text-gray-900 rounded-lg shadow-sm bg-indigo-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -87,8 +92,11 @@ export default function AdminLogin() {
           required
         />
 
-        <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
+        <label htmlFor="admin-password" className="block mb-2 text-sm font-medium text-gray-700">
+          Password
+        </label>
         <input
+          id="admin-password"
           type="password"
           placeholder="Enter password"
           className="w-full p-3 mb-6 text-gray-900 rounded-lg shadow-sm bg-indigo-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none"

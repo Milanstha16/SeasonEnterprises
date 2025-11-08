@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "@/components/hooks/use-toast";
 
+// ✅ Base URL for API
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -14,24 +17,18 @@ export default function ContactPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const { name, email, subject, message } = formData;
-
     setSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/contact", {
+      const response = await fetch(`${API_BASE}/api/contact`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, subject, message }),
       });
 
@@ -40,13 +37,7 @@ export default function ContactPage() {
         throw new Error(error.message || "Failed to send message");
       }
 
-      // Reset form and show success message
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
-      });
+      setFormData({ name: "", email: "", subject: "", message: "" });
       toast({
         title: "Message sent",
         description: `Thanks ${name}, we will reply within 24 hours.`,
@@ -106,15 +97,9 @@ export default function ContactPage() {
       <div className="grid gap-10 md:grid-cols-2">
         <section className="rounded-lg border p-6 bg-card">
           <h2 className="font-medium text-lg">Send us a message</h2>
-          <form
-            onSubmit={onSubmit}
-            className="mt-4 space-y-4"
-            aria-label="Contact form"
-          >
+          <form onSubmit={onSubmit} className="mt-4 space-y-4" aria-label="Contact form">
             <div>
-              <label className="block text-sm mb-1" htmlFor="name">
-                Full name
-              </label>
+              <label className="block text-sm mb-1" htmlFor="name">Full name</label>
               <input
                 id="name"
                 name="name"
@@ -125,9 +110,7 @@ export default function ContactPage() {
               />
             </div>
             <div>
-              <label className="block text-sm mb-1" htmlFor="email">
-                Email
-              </label>
+              <label className="block text-sm mb-1" htmlFor="email">Email</label>
               <input
                 id="email"
                 name="email"
@@ -139,9 +122,7 @@ export default function ContactPage() {
               />
             </div>
             <div>
-              <label className="block text-sm mb-1" htmlFor="subject">
-                Subject
-              </label>
+              <label className="block text-sm mb-1" htmlFor="subject">Subject</label>
               <input
                 id="subject"
                 name="subject"
@@ -152,9 +133,7 @@ export default function ContactPage() {
               />
             </div>
             <div>
-              <label className="block text-sm mb-1" htmlFor="message">
-                Message
-              </label>
+              <label className="block text-sm mb-1" htmlFor="message">Message</label>
               <textarea
                 id="message"
                 name="message"
@@ -174,17 +153,9 @@ export default function ContactPage() {
         <aside className="space-y-5">
           <div className="rounded-lg border p-6">
             <h2 className="font-medium text-lg">Location</h2>
-            <p className="mt-2 text-muted-foreground">
-              Baltimore, MD 21285-5469, USA
-            </p>
-            <p className="mt-2">
-              <span className="text-muted-foreground">Phone:</span>{" "}
-              1-410-372-0590
-            </p>
-            <p className="">
-              <span className="text-muted-foreground">Email:</span>{" "}
-              season@seasonenterprises.com
-            </p>
+            <p className="mt-2 text-muted-foreground">Baltimore, MD 21285-5469, USA</p>
+            <p className="mt-2"><span className="text-muted-foreground">Phone:</span> 1-410-372-0590</p>
+            <p><span className="text-muted-foreground">Email:</span> season@seasonenterprises.com</p>
             <a
               href="https://maps.google.com/?q=Baltimore,MD"
               target="_blank"

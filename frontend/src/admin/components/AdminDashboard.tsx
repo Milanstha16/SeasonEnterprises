@@ -2,68 +2,75 @@ import React, { useEffect, useState } from "react";
 
 const POLL_INTERVAL = 10000; // 10 seconds
 
+interface Stats {
+  totalUsers: number;
+  monthlySales: number;
+  revenue: number;
+  performance: number;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  status?: string;
+}
+
+interface Activity {
+  _id: string;
+  action: string;
+  user: string;
+  timestamp: string;
+}
+
 const AdminDashboard = () => {
-  // State for stats
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     monthlySales: 0,
     revenue: 0,
     performance: 0,
   });
+  const [recentUsers, setRecentUsers] = useState<User[]>([]);
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
 
-  // State for recent users
-  const [recentUsers, setRecentUsers] = useState([]);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  // State for recent activity logs
-  const [recentActivity, setRecentActivity] = useState([]);
-
-  // Fetch stats
+  /* ---------------------------- Fetch Functions --------------------------- */
   const fetchStats = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/stats");
+      const res = await fetch(`${API_BASE_URL}/api/admin/stats`);
       if (!res.ok) throw new Error("Failed to fetch stats");
       const data = await res.json();
-
-      // Ensure all required fields exist, add dummy data if needed
       setStats({
         totalUsers: data.totalUsers || 0,
-        monthlySales: data.monthlySales || 0,  // dummy
-        revenue: data.revenue || 0,            // dummy
-        performance: data.performance || 0,       // dummy (percent)
+        monthlySales: data.monthlySales || 0,
+        revenue: data.revenue || 0,
+        performance: data.performance || 0,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Stats fetch error:", err);
     }
   };
 
-  // Fetch recent users
   const fetchRecentUsers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/recent-users");
+      const res = await fetch(`${API_BASE_URL}/api/admin/recent-users`);
       if (!res.ok) throw new Error("Failed to fetch recent users");
-      const data = await res.json();
-
-      // Add default status "Active" to each user
-      const usersWithStatus = data.map(user => ({
-        ...user,
-        status: "Active",
-      }));
-
-      setRecentUsers(usersWithStatus);
+      const data: User[] = await res.json();
+      setRecentUsers(data.map((u) => ({ ...u, status: "Active" })));
     } catch (err) {
-      console.error(err);
+      console.error("Recent users fetch error:", err);
     }
   };
 
-  // Fetch recent activity logs
   const fetchRecentActivity = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/recent-activity");
+      const res = await fetch(`${API_BASE_URL}/api/admin/recent-activity`);
       if (!res.ok) throw new Error("Failed to fetch recent activity");
-      const data = await res.json();
+      const data: Activity[] = await res.json();
       setRecentActivity(data);
     } catch (err) {
-      console.error(err);
+      console.error("Recent activity fetch error:", err);
     }
   };
 
@@ -91,22 +98,20 @@ const AdminDashboard = () => {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div className="bg-white p-5 rounded-xl shadow-lg border border-indigo-100">
-          <h2 className="text-sm font-medium text-black">Total Users</h2>
-          <p className="text-3xl font-bold text-black mt-2">{stats.totalUsers}</p>
-        </div>
-        <div className="bg-white p-5 rounded-xl shadow-lg border border-indigo-100">
-          <h2 className="text-sm font-medium text-black">Monthly Sales</h2>
-          <p className="text-3xl font-bold text-black mt-2">${stats.monthlySales.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-5 rounded-xl shadow-lg border border-indigo-100">
-          <h2 className="text-sm font-medium text-black">Revenue</h2>
-          <p className="text-3xl font-bold text-black mt-2">${stats.revenue.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-5 rounded-xl shadow-lg border border-indigo-100">
-          <h2 className="text-sm font-medium text-black">Performance</h2>
-          <p className="text-3xl font-bold text-black mt-2">{stats.performance > 0 ? "+" : ""}{stats.performance}%</p>
-        </div>
+        {[
+          { title: "Total Users", value: stats.totalUsers },
+          { title: "Monthly Sales", value: `$${stats.monthlySales.toLocaleString()}` },
+          { title: "Revenue", value: `$${stats.revenue.toLocaleString()}` },
+          { title: "Performance", value: `${stats.performance > 0 ? "+" : ""}${stats.performance}%` },
+        ].map((card, idx) => (
+          <div
+            key={idx}
+            className="bg-white p-5 rounded-xl shadow-lg border border-indigo-100"
+          >
+            <h2 className="text-sm font-medium text-black">{card.title}</h2>
+            <p className="text-3xl font-bold text-black mt-2">{card.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Main Panels */}
@@ -124,10 +129,14 @@ const AdminDashboard = () => {
             </thead>
             <tbody>
               {recentUsers.length === 0 ? (
-                <tr><td colSpan={3} className="p-3 text-center">No recent users</td></tr>
+                <tr>
+                  <td colSpan={3} className="p-3 text-center">
+                    No recent users
+                  </td>
+                </tr>
               ) : (
-                recentUsers.map((user, index) => (
-                  <tr key={index} className="border-b hover:bg-indigo-50">
+                recentUsers.map((user) => (
+                  <tr key={user.id} className="border-b hover:bg-indigo-50">
                     <td className="p-3">{user.name}</td>
                     <td className="p-3">{user.email}</td>
                     <td className="p-3">
@@ -140,6 +149,39 @@ const AdminDashboard = () => {
                       >
                         {user.status}
                       </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Recent Activity Table */}
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-indigo-100">
+          <h2 className="text-xl font-semibold text-black mb-4">Recent Activity</h2>
+          <table className="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr className="bg-indigo-100 text-black uppercase text-xs">
+                <th className="p-3">User</th>
+                <th className="p-3">Action</th>
+                <th className="p-3">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentActivity.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="p-3 text-center">
+                    No recent activity
+                  </td>
+                </tr>
+              ) : (
+                recentActivity.map((act) => (
+                  <tr key={act._id} className="border-b hover:bg-indigo-50">
+                    <td className="p-3">{act.user}</td>
+                    <td className="p-3">{act.action}</td>
+                    <td className="p-3 text-gray-500">
+                      {new Date(act.timestamp).toLocaleString()}
                     </td>
                   </tr>
                 ))

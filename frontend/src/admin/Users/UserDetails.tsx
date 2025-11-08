@@ -20,17 +20,17 @@ const UserDetails = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
   const fetchUser = async () => {
     if (!id) return;
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Fetch failed");
+      if (!res.ok) throw new Error("Failed to fetch user");
       const data: User = await res.json();
       setUser(data);
     } catch (err) {
@@ -49,11 +49,9 @@ const UserDetails = () => {
     setDeleting(true);
     setError("");
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const errorData = await res.json();
@@ -72,9 +70,9 @@ const UserDetails = () => {
     fetchUser();
   }, [id]);
 
-  if (loading) return <p className="p-6">Loading user details...</p>;
-  if (error) return <p className="text-red-600 p-6">{error}</p>;
-  if (!user) return <p className="p-6">No user data available.</p>;
+  if (loading) return <p className="p-6 text-center">Loading user details...</p>;
+  if (error) return <p className="p-6 text-center text-red-600">{error}</p>;
+  if (!user) return <p className="p-6 text-center">No user data available.</p>;
 
   return (
     <div className="p-6 max-w-xl mx-auto bg-white shadow-md rounded-lg border">

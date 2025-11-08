@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button"; // Make sure this import exists and is correct
+import { Button } from "@/components/ui/button";
 
 interface OrderItem {
   name: string;
@@ -24,6 +24,9 @@ interface Order {
   createdAt: string;
 }
 
+// ✅ Base URL for API
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 export default function CheckoutSuccess() {
   const query = new URLSearchParams(useLocation().search);
   const orderId = query.get("orderId");
@@ -32,7 +35,6 @@ export default function CheckoutSuccess() {
 
   useEffect(() => {
     if (!orderId) {
-      // Handle the case where `orderId` is missing
       console.error("Order ID is missing in URL query parameters.");
       setLoading(false);
       return;
@@ -40,7 +42,7 @@ export default function CheckoutSuccess() {
 
     const fetchOrder = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/orders/${orderId}`);
+        const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
         if (!res.ok) throw new Error("Failed to fetch order");
         const data = await res.json();
         setOrder(data);

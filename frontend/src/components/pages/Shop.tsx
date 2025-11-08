@@ -19,8 +19,8 @@ interface Product {
   stock?: number;
 }
 
-// ✅ Base URL for image paths
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// ✅ Base URL for API calls & images
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export default function Shop() {
   const navigate = useNavigate();
@@ -34,10 +34,14 @@ export default function Shop() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axios.get(`${BASE_URL}/api/products`);
+        const res = await axios.get(`${API_BASE}/api/products`);
         setProducts(res.data);
       } catch (err) {
         console.error("Failed to load products:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load products. Please try again later.",
+        });
       }
     };
 
@@ -50,30 +54,30 @@ export default function Shop() {
       id: product._id,
       name: product.name,
       price: product.price,
-      image: `${BASE_URL}/uploads/${product.image}`,
-      stockAvailable: product.stock ?? 0, // ✅ Added this
+      image: `${API_BASE}/uploads/${product.image}`,
+      stockAvailable: product.stock ?? 0,
     });
 
     toast({
       title: "Added to cart",
-      description: `${product.name}`,
+      description: product.name,
     });
   };
 
-  // ✅ Buy Now Logic: clear cart, add product, go to checkout
+  // ✅ Buy Now Logic
   const handleBuyNow = (product: Product) => {
-    clear(); // Clear the cart before adding a single item
+    clear();
     add({
       id: product._id,
       name: product.name,
       price: product.price,
-      image: `${BASE_URL}/uploads/${product.image}`,
-      stockAvailable: product.stock ?? 0, // ✅ Added this
+      image: `${API_BASE}/uploads/${product.image}`,
+      stockAvailable: product.stock ?? 0,
     });
 
     toast({
       title: "Proceeding to checkout...",
-      description: `${product.name}`,
+      description: product.name,
     });
 
     navigate("/checkout");
@@ -82,13 +86,12 @@ export default function Shop() {
   // 🧠 Unique categories for dropdown
   const categories = ["All", ...Array.from(new Set(products.map((p) => p.category)))];
 
-  // 🔎 Filtered product list
+  // 🔎 Filtered products
   const filteredProducts = products.filter((product) => {
     const matchCategory = selectedCategory === "All" || product.category === selectedCategory;
     const matchSearch = `${product.name} ${product.category}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-
     return matchCategory && matchSearch;
   });
 
@@ -103,7 +106,7 @@ export default function Shop() {
           </Link>
         </div>
 
-        {/* Search & Category Filter */}
+        {/* Search & Filter */}
         <div className="flex flex-col md:flex-row items-center gap-4 mb-10">
           <input
             type="text"
@@ -112,16 +115,13 @@ export default function Shop() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full md:w-1/2 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition"
           />
-
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="w-full md:w-1/4 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition"
           >
             {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
+              <option key={category} value={category}>{category}</option>
             ))}
           </select>
         </div>
@@ -139,7 +139,7 @@ export default function Shop() {
                 transition={{ duration: 0.4 }}
               >
                 <img
-                  src={`${BASE_URL}/uploads/${product.image}`}
+                  src={`${API_BASE}/uploads/${product.image}`}
                   alt={product.name}
                   className="w-full h-64 object-cover"
                 />
@@ -149,7 +149,7 @@ export default function Shop() {
                   <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
                   <p className="text-lg font-medium mb-4">${product.price.toFixed(2)}</p>
 
-                  {/* Show out of stock label if stock is 0 */}
+                  {/* Stock status */}
                   {product.stock && product.stock <= 0 ? (
                     <p className="text-red-600 font-semibold mt-2">Out of Stock</p>
                   ) : (

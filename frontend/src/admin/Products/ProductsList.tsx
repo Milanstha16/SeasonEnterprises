@@ -17,21 +17,17 @@ const ProductsList = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Fetch products function
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
+  // Fetch products
   const fetchProducts = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:5000/api/products", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${API_BASE_URL}/api/products`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch products");
-      }
-
+      if (!res.ok) throw new Error("Failed to fetch products");
       const data = await res.json();
       setProducts(data);
     } catch (err: any) {
@@ -53,7 +49,7 @@ const ProductsList = () => {
         <h1 className="text-3xl font-bold text-black">Products</h1>
         <Link to="/admin/products/new">
           <Button className="bg-indigo-700 hover:bg-indigo-800 text-white">
-            Add/Manage
+            Add / Manage
           </Button>
         </Link>
       </div>
@@ -65,7 +61,7 @@ const ProductsList = () => {
         </p>
       )}
 
-      {/* Loading Spinner */}
+      {/* Loading spinner */}
       {loading && (
         <div className="flex justify-center items-center py-6">
           <span className="animate-spin border-4 border-t-4 border-indigo-600 rounded-full w-12 h-12" />
@@ -82,10 +78,10 @@ const ProductsList = () => {
         {products.map((product) => (
           <div
             key={product._id}
-            className="bg-white border border-indigo-100 p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300"
+            className="bg-white border border-indigo-100 p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col"
           >
             <img
-              src={`http://localhost:5000/uploads/${product.image}`}
+              src={`${API_BASE_URL}/uploads/${product.image}`}
               alt={product.name || "Product image"}
               className="h-48 w-full object-cover rounded-lg mb-3"
               onError={(e) =>

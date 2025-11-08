@@ -33,7 +33,8 @@ const Account = () => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+  // ✅ Use environment variable for API base URL
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
   /* -------------------------------------------------------------------------- */
   /*                             Fetch User Orders                              */
@@ -44,11 +45,17 @@ const Account = () => {
     const fetchOrders = async () => {
       setLoadingOrders(true);
       setError(null);
+
       try {
         const res = await fetch(`${API_BASE_URL}/api/orders/my-orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error("Failed to fetch orders");
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.message || "Failed to fetch orders");
+        }
+
         const data: OrderItem[] = await res.json();
         setOrders(data);
       } catch (err: any) {
@@ -85,28 +92,24 @@ const Account = () => {
       });
 
       if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
 
-      if (data.user && data.user.profilePicture) {
+      const data = await res.json();
+      if (data.user?.profilePicture) {
         updateUser({ profilePicture: data.user.profilePicture });
-        setPreview(null); // remove temporary preview, show updated user.profilePicture
+        setPreview(null); // remove temporary preview
       }
     } catch (err: any) {
       console.error("Upload error:", err);
-      alert("Upload failed. Try again.");
+      alert(err.message || "Upload failed. Try again.");
     } finally {
       setUploading(false);
       URL.revokeObjectURL(objectUrl);
     }
   };
 
-  /* -------------------------------------------------------------------------- */
-  /*                         File Change Handler                                */
-  /* -------------------------------------------------------------------------- */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    uploadProfilePicture(file);
+    if (file) uploadProfilePicture(file);
   };
 
   /* -------------------------------------------------------------------------- */

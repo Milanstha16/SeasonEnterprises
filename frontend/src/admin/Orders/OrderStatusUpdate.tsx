@@ -3,36 +3,32 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
+const ORDER_STATUSES = ["pending", "shipped", "delivered", "cancelled"] as const;
+
+type OrderStatus = (typeof ORDER_STATUSES)[number];
+
 const OrderStatusUpdate = () => {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  const [status, setStatus] = useState<string>("");
-  const [initialStatus, setInitialStatus] = useState<string>("");
+  const [status, setStatus] = useState<OrderStatus>("pending");
+  const [initialStatus, setInitialStatus] = useState<OrderStatus>("pending");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [fetching, setFetching] = useState<boolean>(false);
 
-  // Derived boolean
   const isStatusFinal = initialStatus === "cancelled" || initialStatus === "delivered";
 
-  // Fetch order details
   const fetchOrder = async () => {
+    if (!token || !id) return;
+
     setFetching(true);
     setError("");
 
-    if (!token) {
-      setError("Authentication token is missing.");
-      setFetching(false);
-      return;
-    }
-
     try {
       const res = await fetch(`http://localhost:5000/api/orders/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Failed to fetch order");
@@ -42,19 +38,16 @@ const OrderStatusUpdate = () => {
       setInitialStatus(data.status || "pending");
     } catch (err) {
       console.error(err);
-      setError("Could not fetch order.");
+      setError("Could not fetch order details.");
     } finally {
       setFetching(false);
     }
   };
 
   useEffect(() => {
-    if (id && token) {
-      fetchOrder();
-    }
+    fetchOrder();
   }, [id, token]);
 
-  // Handle status update
   const handleUpdate = async () => {
     setError("");
 
@@ -63,8 +56,8 @@ const OrderStatusUpdate = () => {
       return;
     }
 
-    if (!token) {
-      setError("User is not authenticated.");
+    if (!token || !id) {
+      setError("You are not authenticated.");
       return;
     }
 
@@ -82,13 +75,13 @@ const OrderStatusUpdate = () => {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || "Failed to update status");
+        throw new Error(data.message || "Failed to update order status");
       }
 
       navigate(`/admin/orders/${id}`);
     } catch (err: any) {
-      console.error("Error updating status:", err);
-      setError(err.message || "Error updating the status");
+      console.error(err);
+      setError(err.message || "Error updating status");
     } finally {
       setLoading(false);
     }
@@ -117,14 +110,15 @@ const OrderStatusUpdate = () => {
           <select
             id="status"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="border px-3 py-2 rounded w-full mb-4"
+            onChange={(e) => setStatus(e.target.value as OrderStatus)}
+            className="border px-3 py-2 rounded w-full mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             disabled={loading || fetching || isStatusFinal}
           >
-            <option value="pending">Pending</option>
-            <option value="shipped">Shipped</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
+            {ORDER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </option>
+            ))}
           </select>
 
           <Button

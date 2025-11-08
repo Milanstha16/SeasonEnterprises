@@ -17,15 +17,6 @@ const AddProduct = () => {
     image: null as File | null,
   });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
-
   const [editForm, setEditForm] = useState({
     name: "",
     price: "",
@@ -35,9 +26,24 @@ const AddProduct = () => {
     image: null as File | null,
   });
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
+  // Fetch products
   const fetchProducts = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/products");
+      const res = await fetch(`${API_BASE_URL}/api/products`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch products");
       const data = await res.json();
       setProducts(data);
     } catch (err) {
@@ -50,9 +56,8 @@ const AddProduct = () => {
     fetchProducts();
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  // Form handlers
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setError("");
@@ -60,14 +65,12 @@ const AddProduct = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
-      setForm((prev) => ({ ...prev, image: e.target.files![0] }));
+      setForm((prev) => ({ ...prev, image: e.target.files[0] }));
       setError("");
     }
   };
 
-  const handleEditChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setEditForm((prev) => ({ ...prev, [name]: value }));
     setError("");
@@ -75,11 +78,12 @@ const AddProduct = () => {
 
   const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
-      setEditForm((prev) => ({ ...prev, image: e.target.files![0] }));
+      setEditForm((prev) => ({ ...prev, image: e.target.files[0] }));
       setError("");
     }
   };
 
+  // Add product
   const handleAdd = async () => {
     const { name, description, price, category, stock, image } = form;
 
@@ -100,98 +104,26 @@ const AddProduct = () => {
     formData.append("image", image);
 
     try {
-      const res = await fetch("http://localhost:5000/api/products/add-product", {
+      const res = await fetch(`${API_BASE_URL}/api/products/add-product`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        const msg = data.msg || data.error || "Failed to add product.";
-        setError(msg);
-        return;
-      }
+      if (!res.ok) throw new Error(data.msg || data.error || "Failed to add product");
 
       setProducts((prev) => [...prev, data.product]);
-      setForm({
-        name: "",
-        description: "",
-        price: "",
-        category: "",
-        stock: "",
-        image: null,
-      });
+      setForm({ name: "", description: "", price: "", category: "", stock: "", image: null });
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Server error");
+      setError(err.message || "Server error");
     } finally {
       setLoading(false);
     }
   };
 
-  const saveEdit = async (id: string) => {
-    setSavingId(id);
-
-    const formData = new FormData();
-    formData.append("name", editForm.name);
-    formData.append("price", editForm.price);
-    formData.append("category", editForm.category);
-    formData.append("stock", editForm.stock);
-    formData.append("description", editForm.description || "");
-    if (editForm.image) {
-      formData.append("image", editForm.image);
-    }
-
-    try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        const msg = data.msg || data.error || "Failed to update product.";
-        setError(msg);
-        return;
-      }
-
-      fetchProducts();
-      setEditingId(null);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to update product");
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    setDeletingId(id);
-    try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) throw new Error("Delete failed");
-      setProducts((prev) => prev.filter((p) => p._id !== id));
-    } catch (err) {
-      console.error(err);
-      setError("Failed to delete product");
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
+  // Start editing
   const startEditing = (product: any) => {
     setEditingId(product._id);
     setEditForm({
@@ -205,12 +137,61 @@ const AddProduct = () => {
     setError("");
   };
 
-  const isAddDisabled =
-    !form.name || !form.price || !form.category || !form.stock || !form.image || loading;
+  // Save edited product
+  const saveEdit = async (id: string) => {
+    setSavingId(id);
+    const formData = new FormData();
+    formData.append("name", editForm.name);
+    formData.append("price", editForm.price);
+    formData.append("category", editForm.category);
+    formData.append("stock", editForm.stock);
+    formData.append("description", editForm.description || "");
+    if (editForm.image) formData.append("image", editForm.image);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || data.error || "Failed to update product");
+
+      fetchProducts();
+      setEditingId(null);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to update product");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  // Delete product
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Delete failed");
+
+      setProducts((prev) => prev.filter((p) => p._id !== id));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete product");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const isAddDisabled = !form.name || !form.price || !form.category || !form.stock || !form.image || loading;
 
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-10 bg-indigo-50 min-h-screen">
-      <h1 className="text-4xl font-bold text-black text-center mb-10">Add Products</h1>
+    <div className="max-w-6xl mx-auto p-6 md:p-10 bg-indigo-50 min-h-screen">
+      <h1 className="text-4xl font-bold text-black text-center mb-10">Manage Products</h1>
 
       {error && (
         <div className="mb-6 px-4 py-3 bg-red-100 text-red-700 border border-red-300 rounded-md text-center">
@@ -218,7 +199,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      {/* Add Form */}
+      {/* Add Product Form */}
       <section className="mb-12 bg-white p-6 rounded-xl shadow-md border border-indigo-100">
         <h2 className="text-2xl font-semibold text-black mb-4">Add New Product</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -246,9 +227,7 @@ const AddProduct = () => {
           >
             <option value="">Select category</option>
             {allowedCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
+              <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
           <input
@@ -292,7 +271,7 @@ const AddProduct = () => {
 
       {/* Product List */}
       <section className="bg-white p-6 rounded-xl shadow-md border border-indigo-100">
-        <h2 className="text-2xl font-semibold text-black mb-6">Manage Products</h2>
+        <h2 className="text-2xl font-semibold text-black mb-6">Existing Products</h2>
 
         <input
           type="text"
@@ -306,9 +285,7 @@ const AddProduct = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products
-              .filter((product) =>
-                product.name?.toLowerCase().includes(searchTerm.toLowerCase())
-              )
+              .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
               .map((product) => (
                 <div
                   key={product._id}
@@ -316,100 +293,34 @@ const AddProduct = () => {
                 >
                   {editingId === product._id ? (
                     <div>
-                      <input
-                        type="text"
-                        name="name"
-                        value={editForm.name}
-                        onChange={handleEditChange}
-                        className="mb-2 w-full px-2 py-1 border rounded"
-                      />
-                      <input
-                        type="number"
-                        name="price"
-                        value={editForm.price}
-                        onChange={handleEditChange}
-                        className="mb-2 w-full px-2 py-1 border rounded"
-                      />
-                      <select
-                        name="category"
-                        value={editForm.category}
-                        onChange={handleEditChange}
-                        className="mb-2 w-full px-2 py-1 border rounded"
-                      >
+                      <input type="text" name="name" value={editForm.name} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
+                      <input type="number" name="price" value={editForm.price} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
+                      <select name="category" value={editForm.category} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded">
                         <option value="">Select category</option>
-                        {allowedCategories.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
+                        {allowedCategories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                       </select>
-                      <input
-                        type="number"
-                        name="stock"
-                        value={editForm.stock}
-                        onChange={handleEditChange}
-                        className="mb-2 w-full px-2 py-1 border rounded"
-                      />
-                      <textarea
-                        name="description"
-                        value={editForm.description}
-                        onChange={handleEditChange}
-                        className="mb-2 w-full px-2 py-1 border rounded"
-                      />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleEditFileChange}
-                        className="mb-2 w-full"
-                      />
-                      {editForm.image && (
-                        <img
-                          src={URL.createObjectURL(editForm.image)}
-                          alt="Edit Preview"
-                          className="mb-2 w-32 h-32 object-cover rounded"
-                        />
-                      )}
-
+                      <input type="number" name="stock" value={editForm.stock} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
+                      <textarea name="description" value={editForm.description} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
+                      <input type="file" accept="image/*" onChange={handleEditFileChange} className="mb-2 w-full"/>
+                      {editForm.image && <img src={URL.createObjectURL(editForm.image)} alt="Edit Preview" className="mb-2 w-32 h-32 object-cover rounded"/>}
                       <div className="flex gap-2">
-                        <Button
-                          onClick={() => saveEdit(product._id)}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                          disabled={savingId === product._id}
-                        >
+                        <Button onClick={() => saveEdit(product._id)} disabled={savingId === product._id} className="bg-green-600 hover:bg-green-700 text-white">
                           {savingId === product._id ? "Saving..." : "Save"}
                         </Button>
-                        <Button
-                          onClick={() => setEditingId(null)}
-                          className="bg-gray-300 hover:bg-gray-400 text-black"
-                        >
-                          Cancel
-                        </Button>
+                        <Button onClick={() => setEditingId(null)} className="bg-gray-300 hover:bg-gray-400 text-black">Cancel</Button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <img
-                        src={`http://localhost:5000/uploads/${product.image}`}
-                        alt={product.name}
-                        className="w-full h-48 object-cover rounded mb-2"
-                      />
+                      <img src={`${API_BASE_URL}/uploads/${product.image}`} alt={product.name} className="w-full h-48 object-cover rounded mb-2"/>
                       <h3 className="font-semibold text-lg">{product.name}</h3>
                       <p className="text-gray-600">${product.price}</p>
                       <p className="text-sm text-gray-500">{product.category}</p>
                       <p className="text-sm text-gray-500">Stock: {product.stock}</p>
                       <p className="text-sm mt-2">{product.description}</p>
                       <div className="mt-4 flex gap-2">
-                        <Button
-                          onClick={() => startEditing(product)}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          onClick={() => handleDelete(product._id)}
-                          disabled={deletingId === product._id}
-                          className="bg-red-600 hover:bg-red-700 text-white"
-                        >
+                        <Button onClick={() => startEditing(product)} className="bg-yellow-500 hover:bg-yellow-600 text-white">Edit</Button>
+                        <Button onClick={() => handleDelete(product._id)} disabled={deletingId === product._id} className="bg-red-600 hover:bg-red-700 text-white">
                           {deletingId === product._id ? "Deleting..." : "Delete"}
                         </Button>
                       </div>
