@@ -19,13 +19,12 @@ const CartSchema = new mongoose.Schema(
 
 // Pre-save hook: calculate totalPrice for items and cart
 CartSchema.pre("save", function (next) {
-  this.items.forEach(item => {
+  this.items.forEach((item) => {
     item.totalPrice = item.quantity * item.price;
   });
-  this.totalPrice = this.items.reduce((total, item) => total + item.totalPrice, 0);
+  this.totalPrice = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
   next();
 });
 
 const Cart = mongoose.model("Cart", CartSchema);
-
 export default Cart;

@@ -7,6 +7,11 @@ export default function CartPage() {
   const { items, total, update, remove, clear } = useCart();
   const isCartEmpty = items.length === 0;
 
+  const handleQuantityChange = (id: string, value: number, max: number) => {
+    const qty = Math.min(Math.max(1, value || 1), max);
+    update(id, qty);
+  };
+
   return (
     <main className="container py-10">
       <Helmet>
@@ -64,10 +69,10 @@ export default function CartPage() {
                     aria-label={`Quantity for ${item.name}`}
                     className="w-16 rounded border bg-background px-2 py-1 text-center"
                     onChange={(e) =>
-                      update(item.id, Math.min(Math.max(1, Number(e.target.value)), item.stockAvailable))
+                      handleQuantityChange(item.id, Number(e.target.value), item.stockAvailable)
                     }
                     onBlur={(e) =>
-                      update(item.id, Math.min(Math.max(1, Number(e.target.value) || 1), item.stockAvailable))
+                      handleQuantityChange(item.id, Number(e.target.value), item.stockAvailable)
                     }
                   />
                   <Button
