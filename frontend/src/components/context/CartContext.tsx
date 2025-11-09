@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { useLocation } from "react-router-dom";
 
 export type CartItem = {
   id: string;
@@ -24,6 +25,7 @@ interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL!;
 if (!API_BASE_URL) throw new Error("VITE_API_BASE_URL not defined");
 
@@ -37,13 +39,16 @@ function debounce<F extends (...args: any[]) => void>(func: F, delay: number) {
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
+  const location = useLocation();
   const [items, setItems] = useState<CartItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch cart on login
+  const isUserRoute = !location.pathname.startsWith("/admin");
+
+  // Fetch cart only on user-facing routes
   useEffect(() => {
-    if (!token) {
+    if (!token || !isUserRoute) {
       setItems([]);
       return;
     }
@@ -78,11 +83,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     fetchCart();
-  }, [token]);
+  }, [token, isUserRoute]);
 
-  // Sync cart to backend
+  // Sync cart with backend
   const syncCartWithBackend = async (updatedItems: CartItem[]) => {
-    if (!token) return;
+    if (!token || !isUserRoute) return;
 
     try {
       setError(null);
@@ -117,7 +122,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const debouncedSyncCart = useMemo(() => debounce(syncCartWithBackend, 400), [token]);
+  const debouncedSyncCart = useMemo(() => debounce(syncCartWithBackend, 400), [token, isUserRoute]);
 
   const add: CartContextValue["add"] = (item, qty = 1) => {
     setItems((prev) => {
@@ -168,7 +173,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = () => {
     setItems([]);
-    if (!token) return;
+    if (!token || !isUserRoute) return;
     fetch(`${API_BASE_URL}/api/cart/clear`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
@@ -198,8 +203,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider value={value}>
-      {error && <div className="text-red-600 p-2">{error}</div>}
-      {initialLoading && <div className="text-gray-500 p-2">Loading cart...</div>}
+      {/* Only show error/loading on user-facing pages */}
+      {isUserRoute && error && <div className="text-red-600 p-2">{error}</div>}
+      {isUserRoute && initialLoading && <div className="text-gray-500 p-2">Loading cart...</div>}
       {children}
     </CartContext.Provider>
   );
