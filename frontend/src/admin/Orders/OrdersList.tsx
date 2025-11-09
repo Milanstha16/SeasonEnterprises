@@ -15,17 +15,13 @@ const OrdersList = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // Use environment variable for API base URL
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-
   const fetchOrders = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/orders`, {
+      const res = await fetch("http://localhost:5000/api/orders", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) throw new Error("Failed to fetch orders");
 
       const data: Order[] = await res.json();

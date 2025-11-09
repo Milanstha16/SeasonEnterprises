@@ -4,6 +4,7 @@ import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
 const ORDER_STATUSES = ["pending", "shipped", "delivered", "cancelled"] as const;
+
 type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 const OrderStatusUpdate = () => {
@@ -17,11 +18,8 @@ const OrderStatusUpdate = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [fetching, setFetching] = useState<boolean>(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-
   const isStatusFinal = initialStatus === "cancelled" || initialStatus === "delivered";
 
-  // Fetch order details
   const fetchOrder = async () => {
     if (!token || !id) return;
 
@@ -29,21 +27,18 @@ const OrderStatusUpdate = () => {
     setError("");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/orders/${id}`, {
+      const res = await fetch(`http://localhost:5000/api/orders/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to fetch order");
-      }
+      if (!res.ok) throw new Error("Failed to fetch order");
 
       const data = await res.json();
       setStatus(data.status || "pending");
       setInitialStatus(data.status || "pending");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Could not fetch order details.");
+      setError("Could not fetch order details.");
     } finally {
       setFetching(false);
     }
@@ -53,7 +48,6 @@ const OrderStatusUpdate = () => {
     fetchOrder();
   }, [id, token]);
 
-  // Update order status
   const handleUpdate = async () => {
     setError("");
 
@@ -68,8 +62,9 @@ const OrderStatusUpdate = () => {
     }
 
     setLoading(true);
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/orders/${id}/status`, {
+      const res = await fetch(`http://localhost:5000/api/orders/${id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

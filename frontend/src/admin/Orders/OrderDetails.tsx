@@ -42,7 +42,7 @@ const OrderDetails = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  // Fetch order details
+  /* ---------------------------- Fetch Order ---------------------------- */
   const fetchOrder = async () => {
     if (!token) {
       setError("You are not logged in or the session has expired.");
@@ -60,7 +60,7 @@ const OrderDetails = () => {
         throw new Error(`Failed to fetch order: ${text}`);
       }
 
-      const data: Order = await res.json();
+      const data = await res.json();
       setOrder(data);
     } catch (err: any) {
       console.error(err);
@@ -74,14 +74,14 @@ const OrderDetails = () => {
     if (id) fetchOrder();
   }, [id]);
 
-  // Helpers
+  /* ---------------------------- Helpers ---------------------------- */
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
   const formatPaymentMethod = (method: string) => {
     if (!method) return "N/A";
     return method.charAt(0).toUpperCase() + method.slice(1);
   };
 
-  // Render
+  /* ---------------------------- Render ---------------------------- */
   if (loading) return <Loader />;
   if (error) return <p className="text-red-600 p-6">{error}</p>;
   if (!order) return <p className="text-red-600 p-6">Order not found.</p>;
@@ -107,7 +107,7 @@ const OrderDetails = () => {
               ? product.image.startsWith("http")
                 ? product.image
                 : `${API_BASE_URL}/uploads/${product.image}`
-              : "https://via.placeholder.com/80x80?text=No+Image";
+              : "/default-product.jpg";
 
             return (
               <li key={product?._id || idx} className="flex items-center gap-4 border-b py-4">
@@ -115,7 +115,7 @@ const OrderDetails = () => {
                   src={imageUrl}
                   alt={product?.name || "Product"}
                   className="w-20 h-20 object-cover rounded"
-                  onError={(e) => (e.currentTarget.src = "https://via.placeholder.com/80x80?text=No+Image")}
+                  onError={(e) => (e.currentTarget.src = "/default-product.jpg")}
                 />
                 <div>
                   <p className="font-semibold">{product?.name || "Product not available"}</p>
