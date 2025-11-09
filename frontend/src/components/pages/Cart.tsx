@@ -26,7 +26,7 @@ export default function CartPage() {
       <h1 className="font-display text-3xl mb-6">Your Cart</h1>
 
       {isCartEmpty ? (
-        <div className="text-center py-10">
+        <div className="py-10">
           <p className="text-muted-foreground">Your cart is empty.</p>
           <Link to="/shop">
             <Button className="mt-4">Continue Shopping</Button>
