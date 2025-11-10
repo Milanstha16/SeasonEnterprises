@@ -22,6 +22,12 @@ const ProductDetails = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
+  // Helper to handle Cloudinary URLs or local uploads
+  const getImageUrl = (imagePath: string | undefined) => {
+    if (!imagePath) return "https://placehold.co/400x300?text=No+Image";
+    return imagePath.startsWith("http") ? imagePath : `${API_BASE_URL}/uploads/${imagePath}`;
+  };
+
   // Fetch product details
   const fetchProduct = async () => {
     setLoading(true);
@@ -53,7 +59,12 @@ const ProductDetails = () => {
       <div className="p-6 text-center text-red-600">
         <p className="font-semibold">{error}</p>
         <div className="mt-4">
-          <button onClick={() => navigate(-1)} className="px-4 py-2 border rounded">Go Back</button>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 border rounded hover:bg-gray-100 transition"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
@@ -62,7 +73,10 @@ const ProductDetails = () => {
     return (
       <div className="p-6 text-center text-black">
         <p>Product not found.</p>
-        <button onClick={() => navigate(-1)} className="px-4 py-2 border rounded">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 border rounded hover:bg-gray-100 transition"
+        >
           Back
         </button>
       </div>
@@ -70,18 +84,17 @@ const ProductDetails = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <button onClick={() => navigate(-1)} className="mb-6 px-4 py-2 border rounded">
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-6 px-4 py-2 border rounded hover:bg-gray-100 transition"
+      >
         ← Back
       </button>
 
       <h1 className="text-3xl font-semibold mb-4 text-black">{product.name}</h1>
 
       <img
-        src={
-          product.image.startsWith("http")
-            ? product.image
-            : `${API_BASE_URL}/uploads/${product.image}`
-        }
+        src={getImageUrl(product.image)}
         alt={product.name || "Product image"}
         className="w-full max-h-96 object-cover rounded-lg shadow-md mb-6"
         onError={(e) =>
