@@ -37,6 +37,13 @@ const AddProduct = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
+  // Helper to handle Cloudinary URLs or local uploads
+  const getImageUrl = (imagePath: string | null) => {
+    if (!imagePath) return "/default-image.jpg";
+    if (imagePath.startsWith("http")) return imagePath;
+    return `${API_BASE_URL}/uploads/${imagePath}`;
+  };
+
   // Fetch products
   const fetchProducts = async () => {
     try {
@@ -302,7 +309,12 @@ const AddProduct = () => {
                       <input type="number" name="stock" value={editForm.stock} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
                       <textarea name="description" value={editForm.description} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
                       <input type="file" accept="image/*" onChange={handleEditFileChange} className="mb-2 w-full"/>
-                      {editForm.image && <img src={URL.createObjectURL(editForm.image)} alt="Edit Preview" className="mb-2 w-32 h-32 object-cover rounded"/>}
+                      {/* Show preview of new image or existing */}
+                      {editForm.image ? (
+                        <img src={URL.createObjectURL(editForm.image)} alt="Edit Preview" className="mb-2 w-32 h-32 object-cover rounded"/>
+                      ) : (
+                        <img src={getImageUrl(product.image)} alt="Current" className="mb-2 w-32 h-32 object-cover rounded"/>
+                      )}
                       <div className="flex gap-2">
                         <Button onClick={() => saveEdit(product._id)} disabled={savingId === product._id} className="bg-green-600 hover:bg-green-700 text-white">
                           {savingId === product._id ? "Saving..." : "Save"}
@@ -312,7 +324,7 @@ const AddProduct = () => {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <img src={`${API_BASE_URL}/uploads/${product.image}`} alt={product.name} className="w-full h-48 object-cover rounded mb-2"/>
+                      <img src={getImageUrl(product.image)} alt={product.name} className="w-full h-48 object-cover rounded mb-2"/>
                       <h3 className="font-semibold text-lg">{product.name}</h3>
                       <p className="text-gray-600">${product.price}</p>
                       <p className="text-sm text-gray-500">{product.category}</p>
