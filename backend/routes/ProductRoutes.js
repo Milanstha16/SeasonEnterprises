@@ -1,21 +1,39 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { protect, adminOnly } from '../middleware/authMiddleware.js';
 import Product from '../models/Product.js';
 
 const router = express.Router();
 
-const allowedCategories = ['Bags', 'Meditation', 'Jewelry', 'Clothing', 'Home Decor', 'Scarves', 'Stones'];
+const allowedCategories = [
+  'Bags',
+  'Meditation',
+  'Jewelry',
+  'Clothing',
+  'Home Decor',
+  'Scarves',
+  'Stones',
+];
 
-// Multer setup for image uploads
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename(req, file, cb) {
-    const uniqueSuffix = Date.now() + path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix);
+// =====================
+// ✅ Cloudinary Config
+// =====================
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// =====================
+// ✅ Multer + Cloudinary Storage
+// =====================
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'products',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
   },
 });
 
@@ -30,19 +48,19 @@ const upload = multer({
   },
 });
 
-// Helper to build full image URL
-const buildImageUrl = (filename) => {
-  if (!filename) return null;
-  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
-  return `${baseUrl}/uploads/${filename}`;
-};
+// =====================
+// Helper (Cloudinary gives full URL already)
+// =====================
+const buildImageUrl = (image) => image;
 
+// =====================
 // GET all products
+// =====================
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
 
-    const formatted = products.map(p => ({
+    const formatted = products.map((p) => ({
       ...p.toObject(),
       outOfStock: p.stock <= 0,
       imageUrl: buildImageUrl(p.image),
@@ -55,7 +73,9 @@ router.get('/', async (req, res) => {
   }
 });
 
+// =====================
 // GET single product by ID
+// =====================
 router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -72,25 +92,23 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST add product
+// =====================
+// POST add product (Admin only)
+// =====================
 router.post('/add-product', protect, adminOnly, upload.single('image'), async (req, res) => {
   try {
     const { name, description = '', price, category, stock } = req.body;
-    const image = req.file?.filename;
+    const image = req.file?.path; // ✅ Cloudinary URL
 
-    // Parse numbers
     const parsedPrice = parseFloat(price);
     const parsedStock = parseInt(stock, 10);
 
-    // Validate inputs
     if (!name || !image || isNaN(parsedPrice) || isNaN(parsedStock) || !category) {
       return res.status(400).json({ msg: 'All fields are required and must be valid.' });
     }
-
     if (parsedPrice < 0 || parsedStock < 0) {
       return res.status(400).json({ msg: 'Price and stock must be non-negative numbers.' });
     }
-
     if (!allowedCategories.includes(category)) {
       return res.status(400).json({ msg: 'Invalid category.' });
     }
@@ -108,28 +126,24 @@ router.post('/add-product', protect, adminOnly, upload.single('image'), async (r
 
     res.status(201).json({
       msg: 'Product added successfully',
-      product: {
-        ...product.toObject(),
-        imageUrl: buildImageUrl(product.image),
-      },
+      product,
     });
   } catch (err) {
     console.error('Error adding product:', err);
-
-    // Multer file upload error
     if (err instanceof multer.MulterError || err.message === 'Only image files are allowed') {
       return res.status(400).json({ msg: err.message });
     }
-
     res.status(500).json({ msg: 'Server error adding product' });
   }
 });
 
-// PUT update product
+// =====================
+// PUT update product (Admin only)
+// =====================
 router.put('/:id', protect, adminOnly, upload.single('image'), async (req, res) => {
   try {
     const { name, description = '', price, stock, category } = req.body;
-    const image = req.file?.filename;
+    const image = req.file?.path;
 
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ msg: 'Product not found' });
@@ -140,13 +154,23 @@ router.put('/:id', protect, adminOnly, upload.single('image'), async (req, res) 
     if (!name || isNaN(parsedPrice) || isNaN(parsedStock) || !category) {
       return res.status(400).json({ msg: 'All fields are required and must be valid.' });
     }
-
     if (parsedPrice < 0 || parsedStock < 0) {
       return res.status(400).json({ msg: 'Price and stock must be non-negative.' });
     }
-
     if (!allowedCategories.includes(category)) {
       return res.status(400).json({ msg: 'Invalid category.' });
+    }
+
+    // ✅ If updating image, remove old one from Cloudinary
+    if (image && product.image) {
+      try {
+        const urlParts = product.image.split('/');
+        const fileName = urlParts[urlParts.length - 1].split('.')[0];
+        const publicId = `products/${fileName}`;
+        await cloudinary.uploader.destroy(publicId);
+      } catch (cloudErr) {
+        console.warn('Cloudinary delete old image error:', cloudErr.message);
+      }
     }
 
     product.name = name;
@@ -160,28 +184,38 @@ router.put('/:id', protect, adminOnly, upload.single('image'), async (req, res) 
 
     res.json({
       msg: 'Product updated successfully',
-      product: {
-        ...product.toObject(),
-        imageUrl: buildImageUrl(product.image),
-      },
+      product,
     });
   } catch (err) {
     console.error('Error updating product:', err);
-
-    // Multer file upload error
     if (err instanceof multer.MulterError || err.message === 'Only image files are allowed') {
       return res.status(400).json({ msg: err.message });
     }
-
     res.status(500).json({ msg: 'Failed to update product' });
   }
 });
 
-// DELETE product
+// =====================
+// DELETE product (Admin only)
+// =====================
 router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
-    const deleted = await Product.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ msg: 'Product not found' });
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ msg: 'Product not found' });
+
+    // ✅ Delete image from Cloudinary
+    if (product.image) {
+      try {
+        const urlParts = product.image.split('/');
+        const fileName = urlParts[urlParts.length - 1].split('.')[0];
+        const publicId = `products/${fileName}`;
+        await cloudinary.uploader.destroy(publicId);
+      } catch (cloudErr) {
+        console.warn('Cloudinary delete image error:', cloudErr.message);
+      }
+    }
+
+    await product.deleteOne();
 
     res.json({ msg: 'Product deleted successfully' });
   } catch (err) {

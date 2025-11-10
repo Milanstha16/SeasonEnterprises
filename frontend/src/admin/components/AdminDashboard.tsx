@@ -16,13 +16,6 @@ interface User {
   status?: string;
 }
 
-interface Activity {
-  _id: string;
-  action: string;
-  user: string;
-  timestamp: string;
-}
-
 const AdminDashboard = () => {
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
@@ -31,7 +24,6 @@ const AdminDashboard = () => {
     performance: 0,
   });
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
-  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -63,26 +55,13 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchRecentActivity = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/recent-activity`);
-      if (!res.ok) throw new Error("Failed to fetch recent activity");
-      const data: Activity[] = await res.json();
-      setRecentActivity(data);
-    } catch (err) {
-      console.error("Recent activity fetch error:", err);
-    }
-  };
-
   useEffect(() => {
     fetchStats();
     fetchRecentUsers();
-    fetchRecentActivity();
 
     const interval = setInterval(() => {
       fetchStats();
       fetchRecentUsers();
-      fetchRecentActivity();
     }, POLL_INTERVAL);
 
     return () => clearInterval(interval);
@@ -114,81 +93,45 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Main Panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Users Table */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-indigo-100">
-          <h2 className="text-xl font-semibold text-black mb-4">Recent Users</h2>
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-indigo-100 text-black uppercase text-xs">
-                <th className="p-3">Name</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Status</th>
+      {/* Recent Users Table */}
+      <div className="bg-white p-6 rounded-xl shadow-lg border border-indigo-100">
+        <h2 className="text-xl font-semibold text-black mb-4">Recent Users</h2>
+        <table className="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr className="bg-indigo-100 text-black uppercase text-xs">
+              <th className="p-3">Name</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentUsers.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="p-3 text-center">
+                  No recent users
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {recentUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="p-3 text-center">
-                    No recent users
+            ) : (
+              recentUsers.map((user) => (
+                <tr key={user.id} className="border-b hover:bg-indigo-50">
+                  <td className="p-3">{user.name}</td>
+                  <td className="p-3">{user.email}</td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.status === "Active"
+                          ? "bg-green-100 text-green-600"
+                          : "bg-yellow-100 text-yellow-600"
+                      }`}
+                    >
+                      {user.status}
+                    </span>
                   </td>
                 </tr>
-              ) : (
-                recentUsers.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-indigo-50">
-                    <td className="p-3">{user.name}</td>
-                    <td className="p-3">{user.email}</td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.status === "Active"
-                            ? "bg-green-100 text-green-600"
-                            : "bg-yellow-100 text-yellow-600"
-                        }`}
-                      >
-                        {user.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Recent Activity Table */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-indigo-100">
-          <h2 className="text-xl font-semibold text-black mb-4">Recent Activity</h2>
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-indigo-100 text-black uppercase text-xs">
-                <th className="p-3">User</th>
-                <th className="p-3">Action</th>
-                <th className="p-3">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentActivity.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="p-3 text-center">
-                    No recent activity
-                  </td>
-                </tr>
-              ) : (
-                recentActivity.map((act) => (
-                  <tr key={act._id} className="border-b hover:bg-indigo-50">
-                    <td className="p-3">{act.user}</td>
-                    <td className="p-3">{act.action}</td>
-                    <td className="p-3 text-gray-500">
-                      {new Date(act.timestamp).toLocaleString()}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
