@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
+import { User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,10 +7,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/components/context/AuthContext"; // ✅ Import useAuth
+import { useAuth } from "@/components/context/AuthContext";
 
 export default function Navbar() {
-  const { user, logout } = useAuth(); // ✅ Get user and logout from context
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -24,12 +24,14 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-b">
       <div className="container flex h-16 items-center justify-between">
+        {/* Logo */}
         <Link to="/" className="font-display text-xl tracking-wide">
           <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Season Enterprises
           </span>
         </Link>
 
+        {/* Desktop Links */}
         <nav className="hidden md:flex items-center gap-6 text-sm">
           <NavLink to="/" end className={linkCls}>
             Home
@@ -45,7 +47,34 @@ export default function Navbar() {
           </NavLink>
         </nav>
 
+        {/* Right side */}
         <div className="flex items-center gap-3">
+          {/* Mobile Hamburger Menu */}
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="p-2">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <NavLink to="/" end>
+                  <DropdownMenuItem>Home</DropdownMenuItem>
+                </NavLink>
+                <a href="#featured">
+                  <DropdownMenuItem>Featured</DropdownMenuItem>
+                </a>
+                <a href="#about">
+                  <DropdownMenuItem>About</DropdownMenuItem>
+                </a>
+                <NavLink to="/contact">
+                  <DropdownMenuItem>Contact</DropdownMenuItem>
+                </NavLink>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* User Account Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2 px-3">
