@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/context/AuthContext";
 import {
@@ -9,7 +9,6 @@ import {
   FaShoppingCart,
   FaSignOutAlt,
   FaBars,
-  FaTimes,
   FaUserCircle,
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -69,21 +68,35 @@ const AdminNavbar = () => {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
-          {/* Mobile Dropdown Menu */}
+          {/* ✅ Mobile Dropdown Menu (always visible + styled) */}
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="p-2">
-                  <FaBars />
+                <Button
+                  variant="outline"
+                  className="bg-white text-black border border-gray-300 hover:bg-gray-100 transition p-2 rounded-md"
+                >
+                  <FaBars className="text-lg" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-40" align="end">
+
+              <DropdownMenuContent
+                className="w-44 bg-white text-black border border-gray-200 shadow-md"
+                align="end"
+              >
                 {navLinks.map(({ to, label }) => (
                   <NavLink key={to} to={to}>
-                    <DropdownMenuItem>{label}</DropdownMenuItem>
+                    <DropdownMenuItem className="hover:bg-indigo-50">
+                      {label}
+                    </DropdownMenuItem>
                   </NavLink>
                 ))}
-                <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-600 hover:bg-red-50"
+                >
+                  Logout
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

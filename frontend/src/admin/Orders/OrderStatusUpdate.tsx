@@ -94,7 +94,15 @@ const OrderStatusUpdate = () => {
 
   return (
     <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">Update Order Status</h1>
+      {/* ✅ Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-6 inline-flex items-center gap-2 text-indigo-700 hover:text-indigo-900 font-medium transition"
+      >
+        ← Back
+      </button>
+
+      <h1 className="text-2xl font-semibold mb-4 text-black">Update Order Status</h1>
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
@@ -108,7 +116,7 @@ const OrderStatusUpdate = () => {
             </p>
           )}
 
-          <label htmlFor="status" className="block mb-2 font-medium">
+          <label htmlFor="status" className="block mb-2 font-medium text-black">
             Order Status
           </label>
 
@@ -129,6 +137,7 @@ const OrderStatusUpdate = () => {
           <Button
             onClick={handleUpdate}
             disabled={loading || fetching || status === initialStatus || isStatusFinal}
+            className="bg-indigo-700 hover:bg-indigo-800 text-white w-full"
           >
             {loading ? "Updating..." : "Update Status"}
           </Button>

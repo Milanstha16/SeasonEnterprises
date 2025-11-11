@@ -198,8 +198,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider value={value}>
+      {/* Show errors if needed */}
       {error && <div className="text-red-600 p-2">{error}</div>}
-      {initialLoading && <div className="text-gray-500 p-2">Loading cart...</div>}
+      {/* Removed "Loading cart..." */}
       {children}
     </CartContext.Provider>
   );

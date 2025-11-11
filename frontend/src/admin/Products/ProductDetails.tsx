@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Loader } from "@/components/ui/loader";
+import { Button } from "@/components/ui/button"; // ✅ Import Button
 
 interface Product {
   _id: string;
@@ -59,12 +60,10 @@ const ProductDetails = () => {
       <div className="p-6 text-center text-red-600">
         <p className="font-semibold">{error}</p>
         <div className="mt-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 border rounded hover:bg-gray-100 transition"
-          >
-            Go Back
-          </button>
+          {/* 🔹 Styled Back Button */}
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            ← Go Back
+          </Button>
         </div>
       </div>
     );
@@ -73,23 +72,18 @@ const ProductDetails = () => {
     return (
       <div className="p-6 text-center text-black">
         <p>Product not found.</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 border rounded hover:bg-gray-100 transition"
-        >
-          Back
-        </button>
+        <Button variant="outline" onClick={() => navigate(-1)} className="mt-4">
+          ← Back
+        </Button>
       </div>
     );
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-6 px-4 py-2 border rounded hover:bg-gray-100 transition"
-      >
+      {/* 🔹 Styled Back Button */}
+      <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
         ← Back
-      </button>
+      </Button>
 
       <h1 className="text-3xl font-semibold mb-4 text-black">{product.name}</h1>
 

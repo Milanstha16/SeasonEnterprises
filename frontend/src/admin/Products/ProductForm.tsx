@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/context/AuthContext";
 import { Button } from "@/components/ui/button";
-
-const allowedCategories = ['Bags', 'Meditation', 'Jewelry', 'Clothing', 'Home Decor', 'Scarves', 'Stones'];
+import { useNavigate } from "react-router-dom"; // ✅ Added
+// You can change allowedCategories as needed
+const allowedCategories = ['Bags', 'Meditation', 'Jewelry', 'Clothing', 'Home Decor', 'Scarves'];
 
 const AddProduct = () => {
   const { token } = useAuth();
+  const navigate = useNavigate(); // ✅ Added for navigation
 
   const [products, setProducts] = useState<any[]>([]);
   const [form, setForm] = useState({
@@ -34,7 +36,6 @@ const AddProduct = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
   // Helper to handle Cloudinary URLs or local uploads
@@ -198,6 +199,17 @@ const AddProduct = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 md:p-10 bg-indigo-50 min-h-screen">
+      {/* 🔹 Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={() => navigate(-1)}
+          className="text-black hover:bg-gray-100 transition"
+        >
+          ← Back
+        </Button>
+      </div>
+
       <h1 className="text-4xl font-bold text-black text-center mb-10">Manage Products</h1>
 
       {error && (
@@ -309,7 +321,6 @@ const AddProduct = () => {
                       <input type="number" name="stock" value={editForm.stock} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
                       <textarea name="description" value={editForm.description} onChange={handleEditChange} className="mb-2 w-full px-2 py-1 border rounded"/>
                       <input type="file" accept="image/*" onChange={handleEditFileChange} className="mb-2 w-full"/>
-                      {/* Show preview of new image or existing */}
                       {editForm.image ? (
                         <img src={URL.createObjectURL(editForm.image)} alt="Edit Preview" className="mb-2 w-32 h-32 object-cover rounded"/>
                       ) : (

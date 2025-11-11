@@ -87,11 +87,19 @@ const OrderDetails = () => {
   if (!order) return <p className="text-red-600 p-6">Order not found.</p>;
 
   return (
-    <div className="p-6 space-y-6">
-      <Button onClick={() => navigate(-1)}>Back</Button>
+    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      {/* ✅ Back Button (modern, consistent design) */}
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-2 text-indigo-700 hover:text-indigo-900 font-medium transition mb-6"
+      >
+        ← Back
+      </button>
 
       <div>
-        <h1 className="text-2xl font-semibold">Order #{order._id}</h1>
+        <h1 className="text-2xl font-semibold text-black mb-2">
+          Order #{order._id}
+        </h1>
         <p><strong>Status:</strong> {order.status}</p>
         <p><strong>Payment Method:</strong> {formatPaymentMethod(order.paymentMethod)}</p>
         <p><strong>Total:</strong> {formatCurrency(order.totalAmount)}</p>
@@ -99,7 +107,7 @@ const OrderDetails = () => {
 
       {/* Items */}
       <section>
-        <h2 className="text-xl font-semibold mt-4 mb-2">Items</h2>
+        <h2 className="text-xl font-semibold mt-4 mb-2 text-black">Items</h2>
         <ul className="space-y-4">
           {order.items.map((item, idx) => {
             const product = item.productId;
@@ -110,18 +118,28 @@ const OrderDetails = () => {
               : "https://via.placeholder.com/80x80?text=No+Image";
 
             return (
-              <li key={product?._id || idx} className="flex items-center gap-4 border-b py-4">
+              <li
+                key={product?._id || idx}
+                className="flex items-center gap-4 border-b py-4"
+              >
                 <img
                   src={imageUrl}
                   alt={product?.name || "Product"}
                   className="w-20 h-20 object-cover rounded"
-                  onError={(e) => (e.currentTarget.src = "https://via.placeholder.com/80x80?text=No+Image")}
+                  onError={(e) =>
+                    (e.currentTarget.src =
+                      "https://via.placeholder.com/80x80?text=No+Image")
+                  }
                 />
                 <div>
-                  <p className="font-semibold">{product?.name || "Product not available"}</p>
+                  <p className="font-semibold text-black">
+                    {product?.name || "Product not available"}
+                  </p>
                   <p>Quantity: {item.quantity}</p>
                   <p>Price: {formatCurrency(item.priceAtPurchase)}</p>
-                  <p>Total: {formatCurrency(item.priceAtPurchase * item.quantity)}</p>
+                  <p>
+                    Total: {formatCurrency(item.priceAtPurchase * item.quantity)}
+                  </p>
                 </div>
               </li>
             );
@@ -131,7 +149,9 @@ const OrderDetails = () => {
 
       {/* Shipping Info */}
       <section>
-        <h2 className="text-xl font-semibold mt-6 mb-2">Shipping Info</h2>
+        <h2 className="text-xl font-semibold mt-6 mb-2 text-black">
+          Shipping Info
+        </h2>
         <p><strong>Full Name:</strong> {order.shipping.fullName}</p>
         <p><strong>Email:</strong> {order.shipping.email}</p>
         <p><strong>Address:</strong> {order.shipping.address}</p>
@@ -143,10 +163,14 @@ const OrderDetails = () => {
       <div className="mt-6">
         <Link to={`/admin/orders/${order._id}/update`}>
           <Button
-            className="mr-2"
+            className="bg-indigo-700 hover:bg-indigo-800 text-white"
             disabled={order.status === "cancelled"}
             variant={order.status === "cancelled" ? "secondary" : "default"}
-            title={order.status === "cancelled" ? "Cannot update a cancelled order" : ""}
+            title={
+              order.status === "cancelled"
+                ? "Cannot update a cancelled order"
+                : ""
+            }
           >
             Update Status
           </Button>
