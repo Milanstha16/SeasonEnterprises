@@ -29,6 +29,7 @@ export default function Shop() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [loading, setLoading] = useState(true);
 
   // ✅ Helper to get correct image URL
   const getImageUrl = (imagePath: string) => {
@@ -50,6 +51,8 @@ export default function Shop() {
           title: "Error",
           description: "Failed to load products. Please try again later.",
         });
+      } finally {
+        setLoading(false);
       }
     };
     fetchProducts();
@@ -102,12 +105,29 @@ export default function Shop() {
     return matchCategory && matchSearch;
   });
 
+  // 💀 Skeleton loader
+  const SkeletonCard = () => (
+    <div className="border rounded-xl overflow-hidden shadow-sm animate-pulse flex flex-col">
+      <div className="aspect-square bg-gray-200" />
+      <div className="p-5 flex flex-col flex-grow space-y-3">
+        <div className="h-6 bg-gray-200 rounded w-3/4" />
+        <div className="h-4 bg-gray-200 rounded w-1/2" />
+        <div className="h-4 bg-gray-200 rounded w-full" />
+        <div className="h-6 bg-gray-200 rounded w-1/3 mt-auto" />
+        <div className="flex gap-2 mt-4">
+          <div className="h-10 bg-gray-200 rounded w-full" />
+          <div className="h-10 bg-gray-200 rounded w-full" />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <section className="py-16 bg-white min-h-screen">
-      <div className="container">
+      <div className="container mx-auto px-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <h1 className="text-4xl font-display">Shop All Products</h1>
+          <h1 className="text-4xl font-display tracking-tight">Shop All Products</h1>
           <Link to="/cart">
             <Button variant="outline">View Cart</Button>
           </Link>
@@ -135,28 +155,37 @@ export default function Shop() {
 
         {/* Product Grid */}
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+          ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
               <motion.div
                 key={product._id}
-                className="border rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col"
+                className="border rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col bg-white"
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <img
-                  src={getImageUrl(product.image)}
-                  alt={product.name}
-                  className="w-full h-64 object-cover"
-                />
+                {/* Image */}
+                <div className="aspect-square overflow-hidden bg-gray-50 flex items-center justify-center">
+                  <img
+                    src={getImageUrl(product.image)}
+                    alt={product.name}
+                    className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+
+                {/* Details */}
                 <div className="p-5 flex flex-col flex-grow">
-                  <h2 className="text-xl font-semibold mb-1">{product.name}</h2>
+                  <h2 className="text-xl font-semibold mb-1 truncate">{product.name}</h2>
                   <p className="text-sm text-muted-foreground mb-1">{product.category}</p>
-                  <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
+                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                    {product.description}
+                  </p>
                   <p className="text-lg font-medium mb-4">${product.price.toFixed(2)}</p>
 
-                  {/* Stock status */}
+                  {/* Stock status & Actions */}
                   {product.stock && product.stock <= 0 ? (
                     <p className="text-red-600 font-semibold mt-2">Out of Stock</p>
                   ) : (
@@ -165,7 +194,6 @@ export default function Shop() {
                         whileTap={{ scale: 0.95 }}
                         className="w-full bg-muted hover:bg-muted/80 text-sm font-medium text-primary border border-border rounded-md px-4 py-2 transition-colors"
                         onClick={() => handleAddToCart(product)}
-                        disabled={!product.stock || product.stock <= 0}
                       >
                         Add to Cart
                       </motion.button>
@@ -173,7 +201,6 @@ export default function Shop() {
                         variant="default"
                         className="w-full"
                         onClick={() => handleBuyNow(product)}
-                        disabled={!product.stock || product.stock <= 0}
                       >
                         Buy Now
                       </Button>
@@ -183,7 +210,13 @@ export default function Shop() {
               </motion.div>
             ))
           ) : (
-            <p className="col-span-full text-center text-muted-foreground">No products found.</p>
+            <motion.p
+              className="col-span-full text-center text-muted-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              No products found.
+            </motion.p>
           )}
         </div>
       </div>
