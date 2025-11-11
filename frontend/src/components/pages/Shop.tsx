@@ -104,7 +104,7 @@ export default function Shop() {
 
   return (
     <section className="py-16 bg-white min-h-screen">
-      <div className="container mx-auto px-4">
+      <div className="container">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <h1 className="text-4xl font-display">Shop All Products</h1>
@@ -114,18 +114,18 @@ export default function Shop() {
         </div>
 
         {/* Search & Filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 mb-10">
+        <div className="flex flex-col md:flex-row items-center gap-4 mb-10">
           <input
             type="text"
             placeholder="Search by name or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-1/2 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition"
+            className="w-full md:w-1/2 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition"
           />
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full sm:w-1/4 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition"
+            className="w-full md:w-1/4 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition"
           >
             {categories.map((category) => (
               <option key={category} value={category}>{category}</option>
@@ -134,7 +134,7 @@ export default function Shop() {
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
               <motion.div
@@ -148,7 +148,7 @@ export default function Shop() {
                 <img
                   src={getImageUrl(product.image)}
                   alt={product.name}
-                  className="w-full h-56 sm:h-64 object-cover"
+                  className="w-full h-64 object-cover"
                 />
                 <div className="p-5 flex flex-col flex-grow">
                   <h2 className="text-xl font-semibold mb-1">{product.name}</h2>
@@ -160,7 +160,7 @@ export default function Shop() {
                   {product.stock && product.stock <= 0 ? (
                     <p className="text-red-600 font-semibold mt-2">Out of Stock</p>
                   ) : (
-                    <div className="mt-auto flex flex-col sm:flex-row gap-2">
+                    <div className="mt-auto flex gap-2">
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         className="w-full bg-muted hover:bg-muted/80 text-sm font-medium text-primary border border-border rounded-md px-4 py-2 transition-colors"
@@ -171,7 +171,7 @@ export default function Shop() {
                       </motion.button>
                       <Button
                         variant="default"
-                        className="w-full sm:w-auto"
+                        className="w-full"
                         onClick={() => handleBuyNow(product)}
                         disabled={!product.stock || product.stock <= 0}
                       >
