@@ -26,14 +26,11 @@ type OrderItem = {
 /*                                Component                                   */
 /* -------------------------------------------------------------------------- */
 const Account = () => {
-  const { user, token, updateUser } = useAuth();
+  const { user, token } = useAuth();
   const [orders, setOrders] = useState<OrderItem[] | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
 
-  // ✅ Use environment variable for API base URL
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
   /* -------------------------------------------------------------------------- */
@@ -70,49 +67,6 @@ const Account = () => {
   }, [token, API_BASE_URL]);
 
   /* -------------------------------------------------------------------------- */
-  /*                        Upload Profile Picture                              */
-  /* -------------------------------------------------------------------------- */
-  const uploadProfilePicture = async (file: File) => {
-    if (!token) return alert("You must be logged in to upload a profile picture.");
-    if (uploading) return;
-
-    setUploading(true);
-
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl); // show preview immediately
-
-    const formData = new FormData();
-    formData.append("profilePicture", file);
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/users/profile-picture`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Upload failed");
-
-      const data = await res.json();
-      if (data.user?.profilePicture) {
-        updateUser({ profilePicture: data.user.profilePicture });
-        setPreview(null); // remove temporary preview
-      }
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      alert(err.message || "Upload failed. Try again.");
-    } finally {
-      setUploading(false);
-      URL.revokeObjectURL(objectUrl);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) uploadProfilePicture(file);
-  };
-
-  /* -------------------------------------------------------------------------- */
   /*                              Loading Screen                                */
   /* -------------------------------------------------------------------------- */
   if (!user) {
@@ -129,26 +83,17 @@ const Account = () => {
   /* -------------------------------------------------------------------------- */
   return (
     <main className="max-w-4xl mx-auto py-12 px-6 space-y-10 bg-gray-50">
+
       {/* Profile Section */}
       <div className="bg-white rounded-lg shadow-lg p-8">
         <div className="flex justify-center mb-8">
-          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 relative group">
+          {/* Static avatar since profile pictures are removed */}
+          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200">
             <img
-              src={preview ?? user.profilePicture ?? "/default-avatar.jpg"}
+              src="/default-avatar.jpg"
               alt="Profile"
-              className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-80"
-              onError={(e) => (e.currentTarget.src = "/default-avatar.jpg")}
+              className="w-full h-full object-cover"
             />
-            <input
-              type="file"
-              accept="image/*"
-              disabled={uploading}
-              onChange={handleFileChange}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
-            <div className="absolute bottom-0 w-full text-center bg-black bg-opacity-50 text-white text-sm py-1 hidden group-hover:block">
-              {uploading ? "Uploading..." : "Change"}
-            </div>
           </div>
         </div>
 

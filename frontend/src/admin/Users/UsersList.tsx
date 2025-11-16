@@ -74,7 +74,15 @@ const UsersList = () => {
     <div className="p-6 bg-indigo-50 min-h-screen">
       {/* Header & Filters */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-black">Users</h1>
+        
+        {/* Title + Count */}
+        <h1 className="text-3xl font-bold text-black">
+          Users 
+          <span className="text-lg font-medium text-gray-600 ml-2">
+            ({filteredUsers.length})
+          </span>
+        </h1>
+
         <div className="flex gap-2">
           <input
             type="text"

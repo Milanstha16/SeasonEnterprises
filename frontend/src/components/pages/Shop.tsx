@@ -161,19 +161,31 @@ export default function Shop() {
             filteredProducts.map((product) => (
               <motion.div
                 key={product._id}
-                className="border rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col bg-white"
+                className="border rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col bg-white relative"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                {/* Image */}
-                <div className="aspect-square overflow-hidden bg-gray-50 flex items-center justify-center">
+                {/* 🖼️ Product Image */}
+                <div className="relative aspect-square overflow-hidden bg-gray-50 flex items-center justify-center">
                   <img
                     src={getImageUrl(product.image)}
                     alt={product.name}
                     className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />
+
+                  {/* 🟥 Diagonal Out of Stock Ribbon */}
+                  {product.stock !== undefined && product.stock <= 0 && (
+                    <motion.div
+                      className="absolute top-4 right-[-40px] rotate-45 bg-red-600 text-white text-xs font-semibold px-16 py-1 shadow-md"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    >
+                      OUT OF STOCK
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Details */}
@@ -185,27 +197,30 @@ export default function Shop() {
                   </p>
                   <p className="text-lg font-medium mb-4">${product.price.toFixed(2)}</p>
 
-                  {/* Stock status & Actions */}
-                  {product.stock && product.stock <= 0 ? (
-                    <p className="text-red-600 font-semibold mt-2">Out of Stock</p>
-                  ) : (
-                    <div className="mt-auto flex gap-2">
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        className="w-full bg-muted hover:bg-muted/80 text-sm font-medium text-primary border border-border rounded-md px-4 py-2 transition-colors"
-                        onClick={() => handleAddToCart(product)}
-                      >
-                        Add to Cart
-                      </motion.button>
-                      <Button
-                        variant="default"
-                        className="w-full"
-                        onClick={() => handleBuyNow(product)}
-                      >
-                        Buy Now
-                      </Button>
-                    </div>
-                  )}
+                  {/* Buttons */}
+                  <div className="mt-auto flex gap-2">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      disabled={product.stock !== undefined && product.stock <= 0}
+                      className={`w-full text-sm font-medium border rounded-md px-4 py-2 transition-colors ${
+                        product.stock !== undefined && product.stock <= 0
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-muted hover:bg-muted/80 text-primary border-border"
+                      }`}
+                      onClick={() => handleAddToCart(product)}
+                    >
+                      Add to Cart
+                    </motion.button>
+
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      disabled={product.stock !== undefined && product.stock <= 0}
+                      onClick={() => handleBuyNow(product)}
+                    >
+                      Buy Now
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             ))

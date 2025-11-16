@@ -2,9 +2,6 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
 
 // Routes
 import ProductRoutes from "./routes/ProductRoutes.js";
@@ -23,16 +20,6 @@ import paypal from "paypal-rest-sdk";
 // Load environment variables
 dotenv.config();
 
-// Fix __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Ensure upload folders exist
-const uploadsDir = path.join(__dirname, "uploads");
-const profilesDir = path.join(__dirname, "Profiles");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir, { recursive: true });
-
 // Initialize app
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -40,14 +27,12 @@ const PORT = process.env.PORT || 5000;
 // --------------------
 // CORS setup
 // --------------------
-// Read allowed frontend URLs from environment variable, comma-separated
 const FRONTEND_URLS = (process.env.FRONTEND_URLS || "http://localhost:8080,https://season-enterprises.vercel.app")
   .split(",")
   .map(url => url.trim());
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like Postman) or if origin is in allowed list
     if (!origin || FRONTEND_URLS.includes(origin)) {
       return callback(null, true);
     }
@@ -62,8 +47,6 @@ app.use(cors({
 // Middleware
 // --------------------
 app.use(express.json());
-app.use("/uploads", express.static(uploadsDir));
-app.use("/Profiles", express.static(profilesDir));
 
 // --------------------
 // Routes
@@ -93,7 +76,7 @@ if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) throw new Error
 const stripeClient = Stripe(process.env.STRIPE_SECRET_KEY);
 
 paypal.configure({
-  mode: "sandbox", // change to 'live' for production
+  mode: "sandbox",
   client_id: process.env.PAYPAL_CLIENT_ID,
   client_secret: process.env.PAYPAL_SECRET
 });

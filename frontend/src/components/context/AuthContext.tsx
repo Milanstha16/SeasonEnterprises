@@ -8,7 +8,6 @@ export type User = {
   name: string;
   email: string;
   role: "user" | "admin";
-  profilePicture?: string | null;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -38,20 +37,12 @@ const loadFromStorage = <T,>(key: string): T | null => {
   }
 };
 
-// Fix: match the actual backend path for uploaded profile pictures
-const normalizeProfilePicture = (url: string | undefined | null, baseUrl: string) => {
-  if (!url) return null;
-  return url.startsWith("http") ? url : `${baseUrl}/uploads/${url}`;
-};
-
 /* -------------------------------------------------------------------------- */
 /*                              👥 Auth Provider                               */
 /* -------------------------------------------------------------------------- */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
   /* ------------------------ Load from localStorage ------------------------ */
   useEffect(() => {
@@ -60,12 +51,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (savedToken && savedUser) {
       setToken(savedToken);
-      setUser({
-        ...savedUser,
-        profilePicture: normalizeProfilePicture(savedUser.profilePicture, API_BASE_URL),
-      });
+      setUser(savedUser);
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   /* ---------------------------- Cross-tab sync ---------------------------- */
   useEffect(() => {
@@ -73,33 +61,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (e.key === "token") setToken(e.newValue);
       if (e.key === "user") {
         const updatedUser = e.newValue ? JSON.parse(e.newValue) : null;
-        setUser(
-          updatedUser
-            ? { ...updatedUser, profilePicture: normalizeProfilePicture(updatedUser.profilePicture, API_BASE_URL) }
-            : null
-        );
+        setUser(updatedUser);
       }
       if (e.key === null) {
         setToken(null);
         setUser(null);
       }
     };
+
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, [API_BASE_URL]);
+  }, []);
 
   /* ---------------------------- Login / Logout ---------------------------- */
   const login = (token: string, user: User) => {
-    const normalizedUser: User = {
-      ...user,
-      profilePicture: normalizeProfilePicture(user.profilePicture, API_BASE_URL),
-    };
-
     setToken(token);
-    setUser(normalizedUser);
+    setUser(user);
 
     localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(normalizedUser));
+    localStorage.setItem("user", JSON.stringify(user));
   };
 
   const logout = () => {
@@ -117,7 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser: User = {
         ...prev,
         ...updates,
-        profilePicture: normalizeProfilePicture(updates.profilePicture ?? prev.profilePicture, API_BASE_URL),
       };
 
       localStorage.setItem("user", JSON.stringify(updatedUser));

@@ -19,8 +19,10 @@ const UserDetails = () => {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  const [updatingRole, setUpdatingRole] = useState<boolean>(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
   const fetchUser = async () => {
     if (!id) return;
@@ -41,9 +43,38 @@ const UserDetails = () => {
     }
   };
 
+  // ⭐ Update Role (Make Admin)
+  const updateRole = async (newRole: "admin" | "user") => {
+    if (!id) return;
+    setUpdatingRole(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/${id}/role`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update role");
+
+      await fetchUser(); // refresh user details
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update role.");
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
-    const confirmDelete = window.confirm("Are you sure you want to delete this user?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this user?"
+    );
     if (!confirmDelete) return;
 
     setDeleting(true);
@@ -78,7 +109,9 @@ const UserDetails = () => {
     <div className="p-6 max-w-xl mx-auto bg-white shadow-md rounded-lg border">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-gray-800">User Details</h1>
-        <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+        <Button variant="secondary" onClick={() => navigate(-1)}>
+          Back
+        </Button>
       </div>
 
       <div className="space-y-3 text-gray-700">
@@ -90,15 +123,30 @@ const UserDetails = () => {
         </div>
         <div>
           <span className="font-semibold">Role:</span>{" "}
-          <span className={`inline-block px-2 py-0.5 rounded text-sm font-medium ${
-            user.role === "admin" ? "bg-green-200 text-green-800" : "bg-gray-200 text-gray-700"
-          }`}>
+          <span
+            className={`inline-block px-2 py-0.5 rounded text-sm font-medium ${
+              user.role === "admin"
+                ? "bg-green-200 text-green-800"
+                : "bg-gray-200 text-gray-700"
+            }`}
+          >
             {user.role}
           </span>
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 flex gap-3">
+        {/* ⭐ Make Admin Button */}
+        {user.role !== "admin" && (
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => updateRole("admin")}
+            disabled={updatingRole}
+          >
+            {updatingRole ? "Updating..." : "Make Admin"}
+          </Button>
+        )}
+
         <Button
           variant="destructive"
           onClick={handleDelete}

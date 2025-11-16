@@ -13,7 +13,6 @@ interface User {
   id: string;
   name: string;
   email: string;
-  status?: string;
 }
 
 const AdminDashboard = () => {
@@ -49,12 +48,13 @@ const AdminDashboard = () => {
       const res = await fetch(`${API_BASE_URL}/api/admin/recent-users`);
       if (!res.ok) throw new Error("Failed to fetch recent users");
       const data: User[] = await res.json();
-      setRecentUsers(data.map((u) => ({ ...u, status: "Active" })));
+      setRecentUsers(data);
     } catch (err) {
       console.error("Recent users fetch error:", err);
     }
   };
 
+  /* ---------------------------- Lifecycle --------------------------- */
   useEffect(() => {
     fetchStats();
     fetchRecentUsers();
@@ -67,6 +67,7 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  /* ---------------------------- Render --------------------------- */
   return (
     <div className="p-6 bg-indigo-50 min-h-screen">
       {/* Header */}
@@ -81,7 +82,10 @@ const AdminDashboard = () => {
           { title: "Total Users", value: stats.totalUsers },
           { title: "Monthly Sales", value: `$${stats.monthlySales.toLocaleString()}` },
           { title: "Revenue", value: `$${stats.revenue.toLocaleString()}` },
-          { title: "Performance", value: `${stats.performance > 0 ? "+" : ""}${stats.performance}%` },
+          {
+            title: "Performance",
+            value: `${stats.performance > 0 ? "+" : ""}${stats.performance}%`,
+          },
         ].map((card, idx) => (
           <div
             key={idx}
@@ -101,13 +105,12 @@ const AdminDashboard = () => {
             <tr className="bg-indigo-100 text-black uppercase text-xs">
               <th className="p-3">Name</th>
               <th className="p-3">Email</th>
-              <th className="p-3">Status</th>
             </tr>
           </thead>
           <tbody>
             {recentUsers.length === 0 ? (
               <tr>
-                <td colSpan={3} className="p-3 text-center">
+                <td colSpan={2} className="p-3 text-center">
                   No recent users
                 </td>
               </tr>
@@ -116,17 +119,6 @@ const AdminDashboard = () => {
                 <tr key={user.id} className="border-b hover:bg-indigo-50">
                   <td className="p-3">{user.name}</td>
                   <td className="p-3">{user.email}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        user.status === "Active"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-yellow-100 text-yellow-600"
-                      }`}
-                    >
-                      {user.status}
-                    </span>
-                  </td>
                 </tr>
               ))
             )}

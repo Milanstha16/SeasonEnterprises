@@ -1,39 +1,11 @@
 import express from "express";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ------------------- Profiles Upload Directory -------------------
-const uploadDir = path.join("Profiles");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-// ------------------- Multer Storage & Filter -------------------
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${req.user.id}-${Date.now()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (req, file, cb) => {
-    const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      return cb(new Error("Only images (JPEG, PNG, GIF, WebP) are allowed"));
-    }
-    cb(null, true);
-  },
-});
-
-// ------------------- GET All Users (Admin Only) -------------------
+/* ------------------- GET All Users (Admin Only) ------------------- */
 router.get("/", protect, adminOnly, async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -44,12 +16,13 @@ router.get("/", protect, adminOnly, async (req, res) => {
   }
 });
 
-// ------------------- GET Single User -------------------
+/* ------------------- GET Single User ------------------- */
 router.get("/:id", protect, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // User can get their own profile, admin can get any
     if (req.user.role !== "admin" && req.user.id !== req.params.id) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -61,7 +34,7 @@ router.get("/:id", protect, async (req, res) => {
   }
 });
 
-// ------------------- UPDATE Profile (Name/Email/Password) -------------------
+/* ------------------- UPDATE Profile (Name/Email/Password) ------------------- */
 router.patch("/update", protect, async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -86,56 +59,49 @@ router.patch("/update", protect, async (req, res) => {
   }
 });
 
-// ------------------- PATCH Profile Picture -------------------
-router.patch(
-  "/profile-picture",
-  protect,
-  upload.single("profilePicture"),
-  async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+/* ------------------- UPDATE User Role (Admin Only) ------------------- */
+router.patch("/:id/role", protect, adminOnly, async (req, res) => {
+  try {
+    const { role } = req.body;
 
-      const user = await User.findById(req.user.id);
-      if (!user) return res.status(404).json({ error: "User not found" });
-
-      // Delete old profile picture if not default
-      if (user.profilePicture && !user.profilePicture.includes("default-avatar.jpg")) {
-        const oldFile = path.join(uploadDir, path.basename(user.profilePicture));
-        fs.promises.unlink(oldFile).catch(err => {
-          console.warn("⚠️ Failed to delete old profile picture:", err.message);
-        });
-      }
-
-      // Store ONLY filename in DB
-      user.profilePicture = req.file.filename;
-      await user.save();
-
-      const updatedUser = await User.findById(user._id).select("-password");
-
-      res.json({ message: "Profile picture updated successfully", user: updatedUser });
-    } catch (err) {
-      console.error("Error updating profile picture:", err);
-      res.status(500).json({ error: "Failed to update profile picture" });
+    // Validate role
+    if (!["admin", "user"].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
     }
-  }
-);
 
-// ------------------- DELETE User (Admin Only) -------------------
+    // Prevent admins from changing their own roles
+    if (req.user.id === req.params.id) {
+      return res.status(400).json({ error: "You cannot change your own role" });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      message: "User role updated successfully",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Update role error:", err);
+    res.status(500).json({ error: "Failed to update user role" });
+  }
+});
+
+/* ------------------- DELETE User (Admin Only) ------------------- */
 router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
+    // Prevent admin from deleting themselves
     if (req.user.id === req.params.id) {
       return res.status(400).json({ error: "Cannot delete your own account" });
     }
 
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });
-
-    if (user.profilePicture && !user.profilePicture.includes("default-avatar.jpg")) {
-      const oldFile = path.join(uploadDir, path.basename(user.profilePicture));
-      fs.promises.unlink(oldFile).catch(err => {
-        console.warn("⚠️ Failed to delete profile picture:", err.message);
-      });
-    }
 
     await user.deleteOne();
     res.json({ message: "User deleted successfully" });
